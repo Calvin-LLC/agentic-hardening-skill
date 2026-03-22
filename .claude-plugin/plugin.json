@@ -1,0 +1,8 @@
+{
+  "name": "harden",
+  "description": "Language-agnostic codebase hardening: debugging audit, functionality verification, security hardening, and robustness checks. Researches best practices online for every issue found.",
+  "version": "1.0.0",
+  "author": {
+    "name": "h6nja"
+  }
+}
