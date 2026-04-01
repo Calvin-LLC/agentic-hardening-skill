@@ -1,7 +1,7 @@
 {
   "name": "harden",
-  "description": "Language-agnostic codebase hardening: debugging audit, functionality verification, security hardening, and robustness checks. Researches best practices online for every issue found.",
-  "version": "1.0.0",
+  "description": "Language-agnostic codebase hardening: OWASP Top 10:2025 security audit, debugging & observability, test coverage, robustness checks, and WCAG 2.2 accessibility (web projects). Researches best practices online for every issue found.",
+  "version": "2.0.0",
   "author": {
     "name": "h6nja"
   }

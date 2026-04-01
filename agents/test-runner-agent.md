@@ -1,6 +1,6 @@
 ---
 name: test-runner-agent
-description: Discovers and runs existing tests, verifies build succeeds, identifies test coverage gaps. Researches testing best practices for the detected language.
+description: Discovers tests, verifies build configuration, identifies test coverage gaps
 tools: Glob, Grep, Read, Bash, WebSearch, WebFetch
 model: sonnet
 color: green
@@ -53,7 +53,7 @@ If no test runner is detected, report "No test runner found" and skip to gap ana
 
 **Only if a test command is identified:**
 
-Report the discovered test command so the user can run it manually. Do NOT execute it automatically — project-defined commands may be untrusted.
+Report the discovered test command so the user can run it manually. Do NOT execute it automatically -- project-defined commands may be untrusted.
 
 1. Report the test command that would be run
 2. Report the test runner and its configuration
