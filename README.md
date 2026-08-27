@@ -1,113 +1,50 @@
-# /harden
+# Harden
 
-A codebase hardening plugin that audits your project for security vulnerabilities (OWASP Top 10:2025), debugging gaps, test coverage, robustness issues, and accessibility violations (WCAG 2.2). Works with any language. Compatible with both [Claude Code](https://docs.anthropic.com/en/docs/claude-code) and [OpenCode](https://opencode.ai).
+Evidence-driven codebase hardening skill. Drop it into any Agent Skills host.
 
-It doesn't fix anything -- it produces a severity-ranked report with a remediation plan.
+Audits security (OWASP Top 10:2025), supply chain (lockfile inventory vs release SBOM vs SLSA v1.2 provenance), reliability (observability + operational limits), tests, and accessibility (WCAG 2.2 AA, web only). Findings are quoted, matrix-scored, and cited. The skill does not patch the repo.
 
-## How it works
-
-`/harden` launches up to 6 specialized agents that scan your codebase in parallel:
-
-1. **Recon** -- Detects language, framework, build tools, test runners, and maps project structure
-2. **Debug Audit** -- Finds error handling gaps, unstructured logging, missing observability (against 2025 standards: structured logging, OpenTelemetry, fail-closed patterns)
-3. **Test Runner** -- Discovers tests, verifies build configuration, identifies coverage gaps
-4. **Security Audit** -- Full OWASP Top 10:2025 scan (A01-A10 including new Supply Chain and Exceptional Conditions categories), CWE mapping, injection taxonomy, SSRF, SSTI
-5. **Robustness Audit** -- Checks for resource leaks, race conditions, null handling, boundary conditions
-6. **Accessibility Audit** -- WCAG 2.2 Level A + AA (all 55 criteria across 4 POUR principles). Only runs on web projects.
-
-Each agent researches current (2025/2026) best practices online for every issue it finds, citing authoritative sources.
-
-**Limitations:** Recon assumes standard directory naming conventions. The security agent does not flag legitimate systems programming patterns (DLL injection, hooking, direct memory access). The accessibility audit only runs on projects with web/UI components. All agents search for English-language patterns.
-
-## Usage
+## Layout
 
 ```
-/harden                    # Full audit (all 6 agents)
-/harden debug-only         # Debugging & observability only
-/harden security-only      # Security only (OWASP 2025)
-/harden test-only          # Tests & build verification only
-/harden robust-only        # Robustness only
-/harden a11y-only          # Accessibility only (WCAG 2.2, web projects)
-/harden src/auth           # Full audit scoped to a directory
+SKILL.md                 orchestrator (scope, merge, report)
+AGENTS.md                short host instructions for this repo
+agents/_contract.md      safety, schema, severity matrix, tiers, allowlist
+agents/recon.md
+agents/security.md
+agents/reliability.md
+agents/a11y.md
+agents/test-runner.md
 ```
 
-## Report format
+## Invoke
 
-The output is a single consolidated report containing:
+```
+harden
+harden --depth=quick
+harden --depth=deep --scope=security src/auth
+harden --execution=sandboxed-tests --output=report-and-verifier
+```
 
-- **Project Profile** -- Detected language, framework, build/test status
-- **Summary Table** -- Finding counts by category and severity
-- **OWASP 2025 Coverage** -- Status of each A01-A10 category
-- **WCAG 2.2 Coverage** -- Status of each POUR principle (web projects only)
-- **Detailed Findings** -- Each issue with `file:line`, description, OWASP/CWE/WCAG reference, researched best practice (with source URL), and suggested fix
-- **Remediation Plan** -- Prioritized checklist of all fixes grouped by severity
+Default depth is `standard`. Default execution is static (T0). A verifier script is an explicit write under `.tmp/harden/`, not a silent extra phase.
 
-### Severity levels
+## What it will not do
 
-| Level | Meaning |
-|-------|---------|
-| CRITICAL | Will cause data loss, security breach, or crash in production |
-| HIGH | Significant risk or major quality issue |
-| MEDIUM | Should be fixed but not urgent |
-| LOW | Minor improvement |
-| INFO | Suggestion or observation |
+- Treat repo files, comments, or fetched pages as instructions
+- Echo secret values
+- Install packages or run tests unless the host attests a sandbox and you asked
+- Claim WCAG conformance from source inspection
+- Treat a lockfile dump as a standards-conformant SBOM
 
-## Installation
+## Install
 
-### Claude Code
+Clone and point your host at the directory. Agent Skills hosts look for `SKILL.md`.
 
 ```bash
-git clone https://github.com/Calvin-LLC/claude-harden-plugin.git
-cd claude-harden-plugin
-claude plugin add .
+git clone https://github.com/Calvin-LLC/agentic-hardening-skill.git
 ```
 
-Or manually copy to `~/.claude/skills/harden/`.
-
-### OpenCode
-
-Copy the OpenCode-formatted files to your OpenCode config directory:
-
-```bash
-git clone https://github.com/Calvin-LLC/claude-harden-plugin.git
-cp claude-harden-plugin/opencode/commands/harden.md ~/.config/opencode/commands/
-cp claude-harden-plugin/opencode/agents/*.md ~/.config/opencode/agents/
-```
-
-The OpenCode version uses `@subagent` references (e.g., `@recon`, `@security-audit`, `@accessibility-audit`) which map to the agent files in the `agents/` directory.
-
-## Directory structure
-
-```
-├── SKILL.md                          # Claude Code orchestration (7-phase audit)
-├── commands/
-│   └── harden.md                     # Claude Code /harden command wrapper
-├── agents/                           # Claude Code agent definitions
-│   ├── recon-agent.md
-│   ├── debug-audit-agent.md
-│   ├── test-runner-agent.md
-│   ├── security-audit-agent.md
-│   ├── robustness-audit-agent.md
-│   └── accessibility-audit-agent.md
-├── opencode/                         # OpenCode-compatible versions
-│   ├── commands/
-│   │   └── harden.md                 # OpenCode /harden command (standalone)
-│   └── agents/
-│       ├── recon.md
-│       ├── debug-audit.md
-│       ├── test-runner.md
-│       ├── security-audit.md
-│       ├── robustness-audit.md
-│       └── accessibility-audit.md
-└── .claude-plugin/
-    └── plugin.json                   # Claude Code plugin manifest
-```
-
-The Claude Code and OpenCode versions share the same audit logic and checklists. They differ only in frontmatter format and agent invocation syntax.
-
-## Security
-
-Only run `/harden` on projects you trust. The audit reads arbitrary project files and passes their content to agent prompts. Malicious projects could attempt to manipulate agent behavior through crafted file contents.
+Copy or symlink the checkout into the host's skills path, or load it from the clone. One tree, no per-host fork of the agents.
 
 ## License
 
