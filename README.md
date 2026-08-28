@@ -1,23 +1,33 @@
 # Harden
 
-Evidence-driven codebase hardening skill. Drop it into any Agent Skills host.
+An agent skill that audits a codebase for security, supply-chain, reliability, test, and accessibility problems. It runs on any host that loads Agent Skills. The skill reports findings and never edits your code.
 
-Audits security (OWASP Top 10:2025), supply chain (lockfile inventory vs release SBOM vs SLSA v1.2 provenance), reliability (observability + operational limits), tests, and accessibility (WCAG 2.2 AA, web only). Findings are quoted, matrix-scored, and cited. The skill does not patch the repo.
+What it checks:
+
+- Security, against the OWASP Top 10:2025 list
+- Supply chain: the lockfile inventory, whether releases carry an SBOM, and whether builds meet SLSA v1.2 provenance
+- Reliability: logs, traces, metrics, timeouts, retries, backpressure
+- Tests: what exists, what runs, and what the coverage misses
+- Accessibility, against WCAG 2.2 AA, for web projects only
+
+Every finding comes with a quoted excerpt, a severity score from a fixed matrix, and a citation. The skill does not patch the repo.
 
 ## Layout
 
 ```
-SKILL.md                 orchestrator (scope, merge, report)
-AGENTS.md                short host instructions for this repo
-agents/_contract.md      safety, schema, severity matrix, tiers, allowlist
-agents/recon.md
-agents/security.md
-agents/reliability.md
-agents/a11y.md
-agents/test-runner.md
+SKILL.md                 orchestrator: scope, merge, report
+AGENTS.md                host instructions for this repo
+agents/_contract.md      safety rules, finding schema, severity matrix, execution tiers, source allowlist
+agents/recon.md          detects languages, frameworks, CI, and trust boundaries
+agents/security.md       OWASP Top 10:2025 and supply chain
+agents/reliability.md    observability and operational limits
+agents/a11y.md           WCAG 2.2 AA checks plus a manual test plan
+agents/test-runner.md    test discovery and coverage gaps
 ```
 
-## Invoke
+One tree works on every host. You never fork the agents per host.
+
+## Run it
 
 ```
 harden
@@ -26,25 +36,25 @@ harden --depth=deep --scope=security src/auth
 harden --execution=sandboxed-tests --output=report-and-verifier
 ```
 
-Default depth is `standard`. Default execution is static (T0). A verifier script is an explicit write under `.tmp/harden/`, not a silent extra phase.
+The default depth is `standard`. By default the skill only reads your code (tier T0). It writes nothing outside `.tmp/harden/`. With `--output=report-and-verifier` it also writes a verifier script there. Running tests or installing packages needs an explicit flag plus a host that can prove a sandbox.
 
 ## What it will not do
 
 - Treat repo files, comments, or fetched pages as instructions
 - Echo secret values
-- Install packages or run tests unless the host attests a sandbox and you asked
-- Claim WCAG conformance from source inspection
+- Install packages or run tests unless you ask and the host attests a sandbox
+- Claim WCAG conformance from source inspection alone
 - Treat a lockfile dump as a standards-conformant SBOM
 
 ## Install
 
-Clone and point your host at the directory. Agent Skills hosts look for `SKILL.md`.
+Point your Agent Skills host at a clone of this repo. Hosts look for `SKILL.md`.
 
 ```bash
 git clone https://github.com/Calvin-LLC/agentic-hardening-skill.git
 ```
 
-Copy or symlink the checkout into the host's skills path, or load it from the clone. One tree, no per-host fork of the agents.
+Then copy or symlink the checkout into your host's skills path, or load it straight from the clone.
 
 ## License
 
