@@ -51,6 +51,8 @@ Fetch in this order. Log every fetch under `.tmp/harden/sources.json`.
 
 Do not treat `github.com` as a primary domain. Cite `openssf.org` or `slsa.dev` instead of Scorecard READMEs.
 
+Methodology source: this skill imports its audit discipline from the Cloudflare security-audit skill (`https://github.com/cloudflare/security-audit-skill`). Coverage ledger, candidate gate, independent verification, `needs_validation` with no severity, severity capped by demonstrated impact, and stable fingerprints all come from that design. Cite it as `[methodology]` when the report describes why the pipeline works this way.
+
 For each external claim record: `url`, `retrieved` (YYYY-MM-DD), `claim` (exact sentence), `source_type` (`primary` | `vendor` | `secondary`). If a fetch fails: `source unavailable; no normative claim made` or `[training data]`. Never invent a URL.
 
 Three claim types on every finding:
@@ -118,7 +120,7 @@ Read 20+ lines of context before marking a finding. No grep-only finding above `
 
 ## Severity matrix
 
-Do not invent a numeric formula. Cap severity by evidence × reachability, then raise only with demonstrated impact.
+Do not invent a numeric formula. Cap severity by evidence × reachability, then raise only with demonstrated impact. Overall severity never exceeds demonstrated impact.
 
 | Evidence | Reachability | Maximum without exploit reproduction |
 |----------|--------------|--------------------------------------|
@@ -129,7 +131,23 @@ Do not invent a numeric formula. Cap severity by evidence × reachability, then 
 
 Impact axes (record which apply): confidentiality (one user / tenant / many tenants / all users); integrity (local record / tenant data / privileged action / release pipeline); availability (bounded degradation / service outage / systemic outage).
 
-A speculative static pattern is never high/critical because the CWE is serious.
+A speculative static pattern is never high/critical because the CWE is serious. `needs_validation` carries no severity. A missing best practice with no affected principal or resource is a hardening note, not a finding.
+
+## Candidate gate
+
+A candidate needs a complete repository-relative source trace and evidence for the claimed root cause, including the strongest source-visible control. A proposed high or critical needs a bounded observed result, meaningful impact across a stated boundary, complete conditions, and no visible preventing layer. Never strengthen a crash into code execution, ordinary work into shared availability, or a same-principal action into privilege gain. If a required fact is not source-visible or locally observable, use `needs_validation`: name the exact blocker and give a safe owner-observed check. Never give it severity or speculative completion.
+
+## Independent verification
+
+The agent that checks a finding is never the agent that found it. Before the report, a fresh pass re-reads every cited source location, replays the trace, and tries to refute the claim. A verifier may correct wording but may not promote a record to a stronger verdict on its own. A promotion needs a second independent verifier that did not hunt or first-verify. Discard malformed verifier output without repairing it. Re-run with a fresh verifier when the budget permits, otherwise the candidate stays an unresolved ledger entry under the incomplete-run rule.
+
+## Coverage ledger
+
+The orchestrator keeps a deterministic coverage ledger under `.tmp/harden/coverage-ledger.json`. Every in-scope control starts `planned`. Assigning it to an agent moves it to `in_progress`. A finished review with owned evidence moves it to `covered`, `candidate` (with linked fingerprints), or `blocked` (with unresolved facts). Units the budget cannot reach become `deferred` with a reason, never silently unassigned. Prior runs feed the next plan: unchanged prior confirmations re-verify through the current path, changed source re-opens the unit, and prior `needs_validation`, `deferred`, `blocked`, and `rejected` states are work input, never suppression keys.
+
+## Fingerprints
+
+Every candidate carries a stable source-derived fingerprint matching `^[A-Za-z0-9][A-Za-z0-9._:/@+-]*$`. The same root cause keeps the same fingerprint across states and runs. Never include a line number, agent name, severity, or verdict in it. One root cause across several entry paths is one candidate with the strongest complete trace.
 
 ## Agent packet
 
@@ -163,7 +181,7 @@ Recon output is schema-validated. Paths must resolve under the repo root. No fre
 | Logs, traces, metrics, redaction, cardinality, correlation | reliability (observability) | security A09 only for security-event logging/alerting |
 | Timeouts, retries, cancellation, backpressure, races, leaks, fail-closed | reliability (operations) | security A10 only when the safety property is security-relevant |
 | Tests, coverage, execution | tests | |
-| WCAG 2.2 static + manual test plan | a11y | only if recon `web: true` |
+| WCAG 2.2 static triage + handoff to the wcag skill | a11y | only if recon `web: true`; deep rules and browser verification belong to the wcag skill |
 
 ## OWASP Top 10:2025 names
 

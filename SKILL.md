@@ -3,13 +3,15 @@ name: harden
 description: >
   Evidence-driven codebase hardening. Audits security (OWASP Top 10:2025),
   supply chain (inventory vs SBOM vs SLSA v1.2), reliability (OTel + operational
-  limits), tests (sandboxed tiers), and accessibility (WCAG 2.2 AA). Every
-  finding is quoted, matrix-scored, and cited. Does not fix. Reports with
-  file:line and a verification plan. Use when asked to harden, audit security,
-  run /harden, or review OWASP/WCAG/SLSA posture.
+  limits), tests (sandboxed tiers), and accessibility triage (WCAG 2.2 AA,
+  handed off to the wcag skill for browser verification). Audit discipline
+  follows the Cloudflare security-audit skill: coverage ledger, candidate gate,
+  independent verification. Every finding is quoted, matrix-scored, and cited.
+  Does not fix. Reports with file:line and a verification plan. Use when asked
+  to harden, audit security, run /harden, or review OWASP/WCAG/SLSA posture.
 license: MIT
 metadata:
-  version: "3.1.0"
+  version: "4.0.0"
 ---
 
 # Harden
@@ -48,7 +50,7 @@ If the host can delegate to parallel workers, do that. Otherwise run sequentiall
 ## Pipeline
 
 ```
-scope → recon profile → applicable audits → normalize → report
+scope → recon profile → coverage ledger → applicable audits → verify → normalize → report
 ```
 
 ### 0. Safety snapshot
@@ -61,7 +63,11 @@ Read and run `agents/recon.md`. Require a non-empty profile with at least one la
 
 Recon collects inventory (manifests, lockfiles, CI, Actions, images). It does not assess A03. Security does.
 
-### 2. Select specialists
+### 2. Seed the coverage ledger
+
+Write `.tmp/harden/coverage-ledger.json` before launching specialists. Every in-scope control starts `planned`. Assigning it moves it to `in_progress`. Finished reviews move it to `covered`, `candidate`, or `blocked`. Units the budget cannot reach become `deferred` with a reason. Prior ledgers feed the plan per the contract.
+
+### 3. Select specialists
 
 Launch only what applies, in parallel when the host allows:
 
@@ -76,14 +82,20 @@ Do not load a11y on a non-web repo.
 
 Each agent reads `_contract.md`, receives the nonce-wrapped profile, and writes `.tmp/harden/<agent>/findings.yaml`.
 
-### 3. Normalize
+The a11y agent triages only. It flags direct-static issues, labels the rest `needs-validation`, and hands browser verification to the wcag skill. It never duplicates the wcag rulebook.
+
+### 4. Verify
+
+A fresh pass re-reads every cited source location and tries to refute each candidate per the contract. Promotions need a second independent verifier. Update the ledger with every disposition.
+
+### 5. Normalize
 
 - Schema-validate packets. Drop extra keys. Invalid packets become `WARNING: <agent> packet invalid`.
-- Dedupe by sink (`path` + root cause). Keep the owner's wording. Annotate `also flagged by`.
-- Adjudicate with the severity matrix. Higher severity wins only if reachability and evidence_quality support it; otherwise `needs-validation`.
+- Dedupe by fingerprint, then by sink (`path` + root cause). Keep the owner's wording. Annotate `also flagged by`.
+- Adjudicate with the severity matrix. Higher severity wins only if reachability and evidence_quality support it; otherwise `needs-validation`. Severity never exceeds demonstrated impact.
 - Every in-scope OWASP category gets a disposition. Out-of-scope categories are `not-applicable` with one-line evidence, not a fake full audit.
 
-### 4. Report
+### 6. Report
 
 ```markdown
 # Hardening Report: [Project] @ [commit], depth [quick|standard|deep], [scope]
@@ -107,8 +119,8 @@ Each agent reads `_contract.md`, receives the nonce-wrapped profile, and writes 
 | Total | | | | | | |
 
 ## Coverage
-OWASP A01 to A10: disposition each.
-WCAG: static only; "manual conformance verification remains required" on web projects.
+OWASP A01 to A10: disposition each, from the ledger.
+WCAG: static triage only; browser verification belongs to the wcag skill. "Manual conformance verification remains required" on web projects.
 
 ## Findings
 Grouped by severity, IDs like HARDEN-SEC-012. Each finding carries the schema fields.
