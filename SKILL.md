@@ -80,7 +80,7 @@ Launch only what applies, in parallel when the host allows:
 
 Do not load a11y on a non-web repo.
 
-Each agent reads `_contract.md`, receives the nonce-wrapped profile, and writes `.tmp/harden/<agent>/findings.yaml`.
+Each agent reads `_contract.md`, receives the nonce-wrapped profile, and writes `.tmp/harden/<agent>/findings.json`.
 
 The a11y agent triages only. It flags direct-static issues, labels the rest `needs-validation`, and hands browser verification to the wcag skill. It never duplicates the wcag rulebook.
 

@@ -45,7 +45,7 @@ T1+ required host capabilities: allowlisted command, timeout, CPU/RAM/disk/proce
 
 Fetch in this order. Log every fetch under `.tmp/harden/sources.json`.
 
-1. Primary: `owasp.org`, `cheatsheetseries.owasp.org`, `cwe.mitre.org`, `w3.org/TR/WCAG22`, `w3.org/WAI/standards-guidelines/wcag/new-in-22`, `pages.nist.gov/800-63`, `slsa.dev`, `opentelemetry.io`, `openssf.org`
+1. Primary: `owasp.org`, `cheatsheetseries.owasp.org`, `cwe.mitre.org`, `w3.org/TR/WCAG22`, `w3.org/WAI/standards-guidelines/wcag/new-in-22`, `pages.nist.gov/800-63`, `slsa.dev`, `opentelemetry.io`, `openssf.org`, `genai.owasp.org`, `nist.gov`, `cisa.gov`, `whitehouse.gov`, `digital-strategy.ec.europa.eu`, `enisa.europa.eu`, `cyclonedx.org`, `spdx.dev`
 2. Vendor docs for the detected language/framework and package registry docs
 3. Secondary, labeled `[secondary]`: MDN and well-known hardening guides
 
@@ -87,34 +87,50 @@ Before any excerpt leaves an agent:
 
 ## Finding schema
 
-`severity` ∈ `critical | high | medium | low | info`
-`status` ∈ `open | needs-validation | not-applicable | blocked`
+Packets are JSON. Validate with `scripts/validate-findings.cjs`.
+
+`severity` ∈ `critical | high | medium | low | info`. Present only when `status` is `open`.
+`status` ∈ `open | needs-validation | hardening-note | not-applicable | blocked`
 `confidence` ∈ `high | medium | low`
 `reachability` ∈ `confirmed | plausible | speculative | not-reachable`
 `evidence_quality` ∈ `strong | medium | weak`
 
-```yaml
-id: HARDEN-SEC-012
-title: Missing server-side ownership check on invoice download
-agent: security
-category: { owasp_2025: A01, cwe: [CWE-862, CWE-639] }
-severity: high
-status: open
-confidence: high
-reachability: confirmed
-evidence_quality: strong
-affected: { commit: <sha>, paths: ["src/routes/invoices.ts:84-102"] }
-evidence:
-  - type: code-dataflow
-    claim_type: observed
-    excerpt: "<sanitized 5-10 line quote>"
-impact: "Authenticated user can read another tenant's invoice."
-exploit_preconditions: "Valid account + known/predictable ID."
-remediation: { immediate: "Authorize tenant at retrieval.", durable: "Centralize resource auth + regression test." }
-verification: "Cross-tenant GET returns 404/403 with no metadata leak."
-sources: [{ url: "https://owasp.org/Top10/2025/A01_2025-Broken_Access_Control/", retrieved: "2026-08-27", claim: "Enforce access control on every object access.", source_type: primary }]
-false_positive_notes: "Not a finding if getInvoice() always scopes by tenant."
+`control` is the ledger unit the finding belongs to (`A01`, `ASI02`, `IAC-IAM`, `fail-closed`). `category` names the standards the finding maps to. A security finding sets at least one of `owasp_2025`, `llm_2026`, `asi_2026`, and several may be set. An a11y finding sets `wcag` (a list such as `["1.4.3"]`). Reliability and tests findings may leave all of them empty unless the issue is security-relevant. Example of several: an MCP tool that runs unsanitized shell input is `asi_2026: ASI05` and `owasp_2025: A05`. A finding under a module control sets `owasp_2025` from that module's mapping, so `IAC-IAM` carries `owasp_2025: A02`. A reliability finding that is also security-relevant (a fail-open auth path) keeps `control: fail-closed` and sets `owasp_2025: A10`.
+
+```json
+{
+  "id": "HARDEN-SEC-012",
+  "title": "Missing server-side ownership check on invoice download",
+  "agent": "security",
+  "control": "A01",
+  "category": { "owasp_2025": "A01", "llm_2026": null, "asi_2026": null, "wcag": [], "cwe": ["CWE-862", "CWE-639"] },
+  "fingerprint": "invoices-download-missing-tenant-scope",
+  "severity": "high",
+  "status": "open",
+  "confidence": "high",
+  "reachability": "confirmed",
+  "evidence_quality": "strong",
+  "affected": { "commit": "<sha>", "paths": ["src/routes/invoices.ts:84-102"] },
+  "evidence": [
+    { "type": "code-dataflow", "claim_type": "observed", "excerpt": "<sanitized 5-10 line quote>" }
+  ],
+  "impact": "Authenticated user can read another tenant's invoice.",
+  "exploit_preconditions": "Valid account + known/predictable ID.",
+  "remediation": { "immediate": "Authorize tenant at retrieval.", "durable": "Centralize resource auth + regression test." },
+  "verification": "Cross-tenant GET returns 404/403 with no metadata leak.",
+  "sources": [
+    { "url": "https://owasp.org/Top10/2025/A01_2025-Broken_Access_Control/", "retrieved": "2026-08-27", "claim": "Enforce access control on every object access.", "source_type": "primary" }
+  ],
+  "false_positive_notes": "Not a finding if getInvoice() always scopes by tenant."
+}
 ```
+
+Status rules:
+
+- `open`: has `severity`.
+- `needs-validation`: no `severity`. Carries `blockers` (the exact unresolved facts, one line each) and `validation_plan` (a safe check an owner can run or observe).
+- `hardening-note`: no `severity`. Carries `upstream_control` (the layer that already blocks the attack, with `file:line`) or a non-empty `regulatory` list, and nothing else that implies exploitability.
+- `not-applicable` and `blocked`: no `severity`; state the reason in `impact`.
 
 Read 20+ lines of context before marking a finding. No grep-only finding above `low`. High/critical require a reproduction path or Source→Sink dataflow. Absence of evidence is not evidence of absence.
 
@@ -124,14 +140,22 @@ Do not invent a numeric formula. Cap severity by evidence × reachability, then 
 
 | Evidence | Reachability | Maximum without exploit reproduction |
 |----------|--------------|--------------------------------------|
-| weak | speculative | low, status `needs-validation` |
+| weak | speculative | no severity, status `needs-validation` |
 | medium | plausible | medium |
 | strong | confirmed source-to-sink | high |
 | strong | confirmed and broad compromise, data loss, or RCE | critical |
 
 Impact axes (record which apply): confidentiality (one user / tenant / many tenants / all users); integrity (local record / tenant data / privileged action / release pipeline); availability (bounded degradation / service outage / systemic outage).
 
-A speculative static pattern is never high/critical because the CWE is serious. `needs_validation` carries no severity. A missing best practice with no affected principal or resource is a hardening note, not a finding.
+A speculative static pattern is never high/critical because the CWE is serious. `needs-validation` carries no severity. A missing best practice with no affected principal or resource is a hardening note, not a finding.
+
+## Hardening notes
+
+Defense-in-depth gaps are not vulnerabilities. If layer A already prevents the attack, the absence of layer B is a `hardening-note`: cite layer A with `file:line` in `upstream_control`, give no severity, and list it in the report's own Hardening notes section, never in the severity table. A note whose upstream layer cannot be shown is not a note; it is a `needs-validation` candidate.
+
+## Regulatory tags
+
+A finding or note may carry `regulatory`, a list drawn from `M-26-15` (post-quantum cryptography migration), `M-26-14` (risk-based logging), `BOD-26-04` (exploit-based prioritization), `CRA` (EU Cyber Resilience Act), `CISA-SBOM-2026` (2026 SBOM minimum elements), `NIST-agent-identity` (NIST agent identity design tenets). These bind specific organizations, not every repository. A tag adds context to the report. It never raises severity and never turns a hardening note into an open finding. Exploit evidence and the severity matrix decide severity.
 
 ## Candidate gate
 
@@ -143,7 +167,9 @@ The agent that checks a finding is never the agent that found it. Before the rep
 
 ## Coverage ledger
 
-The orchestrator keeps a deterministic coverage ledger under `.tmp/harden/coverage-ledger.json`. Every in-scope control starts `planned`. Assigning it to an agent moves it to `in_progress`. A finished review with owned evidence moves it to `covered`, `candidate` (with linked fingerprints), or `blocked` (with unresolved facts). Units the budget cannot reach become `deferred` with a reason, never silently unassigned. Prior runs feed the next plan: unchanged prior confirmations re-verify through the current path, changed source re-opens the unit, and prior `needs_validation`, `deferred`, `blocked`, and `rejected` states are work input, never suppression keys.
+The orchestrator keeps a deterministic coverage ledger under `.tmp/harden/coverage-ledger.json`, validated with `scripts/validate-ledger.cjs`. One unit per control; each unit has one owner. Every in-scope control starts `planned`. Assigning it to an agent moves it to `in_progress`. A finished review with owned evidence moves it to `covered`, `candidate` (with linked fingerprints), or `blocked` (with unresolved facts). Units the budget cannot reach become `deferred` with a reason, never silently unassigned. Ledger values use underscores (`in_progress`, `not_applicable`, `out_of_scope`); finding statuses use hyphens.
+
+Each unit records `reviewed_paths` (regular files only, no directories or globs) and `evidence_hash`, a map from each reviewed path to `git hash-object --no-filters -- <path>` (the exact bytes on disk, so line-ending settings cannot change it). A deleted file goes in the unit's `deleted_paths` and counts as changed. The ledger records `base_commit` and `dirty` (true when `git status --porcelain` is non-empty); a dirty run says so in its coverage statement. Prior runs feed the next plan: unchanged prior evidence still re-verifies through the current path, changed source re-opens the unit, and prior `needs-validation`, `deferred`, `blocked`, and rejected states are work input, never suppression keys.
 
 ## Fingerprints
 
@@ -151,22 +177,22 @@ Every candidate carries a stable source-derived fingerprint matching `^[A-Za-z0-
 
 ## Agent packet
 
-Every specialist writes `.tmp/harden/<agent>/findings.yaml` and returns only this shape:
+Every specialist writes `.tmp/harden/<agent>/findings.json` and returns only this shape:
 
-```yaml
-agent: security
-scope:
-  paths: []
-  technologies: []
-coverage:
-  - control: A01
-    disposition: assessed   # assessed | not-applicable | not-assessable | blocked
-    evidence_refs: []
-findings: []
-limitations:
-  - Static-only review; no runtime verification.
-recommendations: []
+```json
+{
+  "agent": "security",
+  "scope": { "paths": [], "technologies": [] },
+  "coverage": [
+    { "control": "A01", "disposition": "assessed", "evidence_refs": [] }
+  ],
+  "findings": [],
+  "limitations": ["Static-only review; no runtime verification."],
+  "recommendations": []
+}
 ```
+
+`disposition` ∈ `assessed | not-applicable | not-assessable | blocked`. Every `coverage[].control` is a ledger unit the agent owns. The orchestrator maps `assessed` to ledger `covered` (or `candidate` when findings are linked), `not-assessable` and `blocked` to `blocked`, and `not-applicable` to `not_applicable`.
 
 Stop conditions: cap key-file lists at 10 paths; cap findings per control at 25 (summarize the rest); do not glob unbounded vendor/minified trees (`node_modules`, `vendor`, `dist`, `.git`).
 
@@ -176,7 +202,9 @@ Recon output is schema-validated. Paths must resolve under the repo root. No fre
 
 | Check | Owner | Others |
 |-------|-------|--------|
-| Authz, IDOR, BOLA/BFLA, SSRF, CSRF, injection, secrets, AI features | security | |
+| Authz, IDOR, BOLA/BFLA, SSRF, CSRF, injection, secrets, confused-deputy delegation | security | |
+| LLM and agentic risks (`LLM01` to `LLM10`, `ASI01` to `ASI10`) | security (modules `ai-llm`, `agentic`) | reliability owns `ASI08` and agent action logging |
+| IaC, tenant isolation, release and regulatory evidence (`IAC-*`, `TEN-*`, `REL-*`) | security (modules `iac`, `tenant-isolation`, `release-compliance`) | |
 | Lockfiles, lifecycle scripts, Actions pinning, provenance, SBOM vs inventory | security (A03) | recon collects inventory |
 | Logs, traces, metrics, redaction, cardinality, correlation | reliability (observability) | security A09 only for security-event logging/alerting |
 | Timeouts, retries, cancellation, backpressure, races, leaks, fail-closed | reliability (operations) | security A10 only when the safety property is security-relevant |
@@ -195,6 +223,49 @@ A07 Authentication Failures
 A08 Software or Data Integrity Failures
 A09 Security Logging and Alerting Failures
 A10 Mishandling of Exceptional Conditions
+
+2025 is the current web edition (owasp.org/www-project-top-ten). No 2026 web list exists. Do not cite `A01:2026` or similar.
+
+## OWASP Top 10 for LLM Applications:2026 names
+
+Published 2026-08-03 at genai.owasp.org. Ranks 01 to 06 are confirmed on OWASP's own pages; 07 to 10 come from a Cloud Security Alliance summary and carry `[secondary]` until OWASP's page lists them. Use these numbers only. In the 2025 edition 06 was Excessive Agency, 07 System Prompt Leakage, and 10 Unbounded Consumption; those numbers are wrong for 2026.
+
+LLM01 Prompt Injection
+LLM02 Sensitive Information Disclosure
+LLM03 Excessive Agency
+LLM04 Supply Chain
+LLM05 Data and Model Poisoning
+LLM06 Unbounded Consumption
+LLM07 Misinformation [secondary]
+LLM08 Hidden Context Exposure (was System Prompt Leakage; covers retrieved policy text, tool schemas, and workflow rules) [secondary]
+LLM09 Vector and Embedding Weaknesses [secondary]
+LLM10 Improper Output Handling [secondary]
+
+## OWASP Top 10 for Agentic Applications (2026) names
+
+Released 2025-12-09 at genai.owasp.org.
+
+ASI01 Agent Goal Hijack
+ASI02 Tool Misuse and Exploitation
+ASI03 Identity and Privilege Abuse
+ASI04 Agentic Supply Chain Vulnerabilities
+ASI05 Unexpected Code Execution
+ASI06 Memory and Context Poisoning
+ASI07 Insecure Inter-Agent Communication
+ASI08 Cascading Failures
+ASI09 Human-Agent Trust Exploitation
+ASI10 Rogue Agents
+
+## Control owners
+
+Each ledger control has exactly one owner. Two agents never write the same unit. An agent that finds an issue in a control it does not own hands it to the owner.
+
+| Controls | Owner |
+|----------|-------|
+| `A01` to `A10`, `LLM01` to `LLM10`, `ASI01` to `ASI07`, `ASI09`, `ASI10`, `IAC-*`, `TEN-*`, `REL-*` | security |
+| `ASI08`, `structured-logging`, `correlation`, `redaction`, `bounds`, `idempotency`, `races`, `fail-closed`, `agent-action-logging` | reliability |
+| `tests` | tests |
+| `perceivable`, `operable`, `understandable`, `robust`, `wcag-2.2-new` | a11y |
 
 ## WCAG facts
 

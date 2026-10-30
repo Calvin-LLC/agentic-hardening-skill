@@ -54,7 +54,7 @@ Key files to read: at most 10 paths, each with a one-line reason. Paths must res
 
 ## Output
 
-Write `.tmp/harden/recon/profile.yaml` and print the same packet.
+Write `.tmp/harden/recon/profile.json` and print the same packet.
 
 ```yaml
 agent: recon

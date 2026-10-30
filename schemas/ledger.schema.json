@@ -1,0 +1,60 @@
+{
+  "$comment": "Coverage ledger. scripts/validate-ledger.cjs adds the file-system and cross-packet rules this schema cannot express.",
+  "type": "object",
+  "required": ["run", "base_commit", "dirty", "profile", "units"],
+  "additionalProperties": false,
+  "properties": {
+    "run": {
+      "type": "object",
+      "required": ["depth", "scope", "prior_ledger"],
+      "additionalProperties": false,
+      "properties": {
+        "depth": { "enum": ["quick", "standard", "deep"] },
+        "scope": { "type": "array", "items": { "type": "string" } },
+        "prior_ledger": { "type": "boolean" }
+      }
+    },
+    "base_commit": { "type": "string", "pattern": "^([0-9a-f]{40}|none)$" },
+    "dirty": { "type": "boolean" },
+    "profile": {
+      "type": "object",
+      "required": ["modules"],
+      "additionalProperties": false,
+      "properties": { "modules": { "type": "array", "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" } } }
+    },
+    "units": { "type": "array", "maxItems": 1000, "items": { "$ref": "#/$defs/unit" } }
+  },
+  "$defs": {
+    "unit": {
+      "type": "object",
+      "required": ["control", "owner", "status", "prior_status", "reviewed_paths", "deleted_paths", "evidence_hash", "fingerprints", "unresolved"],
+      "additionalProperties": false,
+      "properties": {
+        "control": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$" },
+        "owner": { "enum": ["security", "reliability", "tests", "a11y"] },
+        "status": { "enum": ["planned", "in_progress", "covered", "candidate", "blocked", "deferred", "not_applicable", "out_of_scope"] },
+        "prior_status": {
+          "enum": [
+            "none",
+            "new",
+            "prior_covered_same_source",
+            "prior_covered_changed_source",
+            "prior_open_same_source",
+            "prior_open_changed_source",
+            "prior_needs_validation",
+            "prior_deferred",
+            "prior_blocked"
+          ]
+        },
+        "reviewed_paths": { "type": "array", "maxItems": 1000, "items": { "type": "string", "minLength": 1 } },
+        "deleted_paths": { "type": "array", "maxItems": 1000, "items": { "type": "string", "minLength": 1 } },
+        "evidence_hash": {
+          "type": "object",
+          "additionalProperties": { "type": "string", "pattern": "^[0-9a-f]{40}$" }
+        },
+        "fingerprints": { "type": "array", "items": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/@+-]*$" } },
+        "unresolved": { "type": "array", "items": { "type": "string", "minLength": 1, "maxLength": 4096 } }
+      }
+    }
+  }
+}
