@@ -35,7 +35,23 @@ Frameworks from the primary manifest (React, Next, Express, Fastify, Nest, Vue, 
 
 Set `web: true` if HTML/JSX/TSX/Vue/Svelte/Astro/ERB/PHP templates exist outside docs. Otherwise `web: false`.
 
-Set `ai: true` if the repo uses model/tool/RAG/agent constructs (`openai`, `anthropic`, `langchain`, vector stores, tool-calling). Otherwise `ai: false`.
+Set `ai: true` if the repo calls a large language or other generative model, builds retrieval, or ships prompt text written for one (even when the call is stubbed): an LLM SDK (`openai`, `anthropic`, `@google/genai`, `ollama`, `litellm`), RAG or vector stores, embeddings, or prompt files. A classic local model (YOLO, scikit-learn, ONNX classifier) with no prompt is not `ai`; note it in `limitations`. Otherwise `ai: false`.
+
+Set `agent_loop: true` if a model's output chooses which tool to call or which step comes next: a tool-calling loop, an agent framework (`langgraph`, `crewai`, `autogen`, `pydantic-ai`, `mastra`, `openai-agents`), or agent-to-agent messaging. Set `mcp: true` if the repo implements or consumes an MCP server (`@modelcontextprotocol/sdk`, `mcp`, `fastmcp`, an `mcp.json`, or `.mcp/` config). `agent_loop: true` implies `ai: true`. A repo that only calls a model once per request has `ai: true` and `agent: false`.
+
+Set `iac: true` if Terraform (`*.tf`), Pulumi, CloudFormation, Kubernetes manifests, Helm charts, Dockerfiles, or compose files exist outside docs and fixtures. Set `multi_tenant: true` if tenant, org, workspace, or team identifiers scope rows, meaning one boundary holds many users who must not see each other's group data. Rows owned by a single end user (`user_id`, `owner_id`) are ordinary per-user ownership, an A01 check, and leave `multi_tenant` false. Set `publishes: true` if a workflow publishes a package, pushes a container image, or creates a release.
+
+Set `modules` from those flags. Each module is a file under `agents/modules/`; read its header for `owner` and `readers`.
+
+| Flag | Module |
+|------|--------|
+| `ai: true` | `ai-llm` |
+| `agent_loop: true` or `mcp: true` | `agentic` |
+| `iac: true` | `iac` |
+| `multi_tenant: true` | `tenant-isolation` |
+| `publishes: true` | `release-compliance` |
+
+Do not list a module whose flag is false.
 
 Supply-chain inventory (collect, do not assess):
 
@@ -43,6 +59,8 @@ Supply-chain inventory (collect, do not assess):
 - Registries, overrides, `preinstall`/`postinstall`/`prepare`.
 - `.github/workflows/**`, Dockerfiles, IaC. Note Actions pinned to SHA vs mutable tags.
 - SBOM files if present (CycloneDX/SPDX). Absence means "no release SBOM found", not "no inventory".
+- VEX files, AIBOM files (CycloneDX 1.6+ ML-BOM or SPDX 3 AI profile), and `SECURITY.md` with its disclosure contact line. Path only.
+- When `ai` or `agent` is true: prompt files, tool-schema files, MCP manifests, and the names of environment variables that hold model or tool credentials. Names only. Never read values.
 
 Trust-boundary diagram (ASCII or Mermaid): client, API, workers, queue, storage, third-party APIs, IdP, LLM/tools, CI runner, artifact registry, signer. Mark where untrusted input enters.
 
@@ -54,23 +72,35 @@ Key files to read: at most 10 paths, each with a one-line reason. Paths must res
 
 ## Output
 
-Write `.tmp/harden/recon/profile.json` and print the same packet.
+Write `.tmp/harden/recon/profile.json`, check it with `node <skill-dir>/scripts/validate-recon.cjs .tmp/harden/recon/profile.json`, and print the same packet.
 
-```yaml
-agent: recon
-languages: []
-frameworks: []
-web: false
-ai: false
-package_managers: []
-manifests: []
-lockfiles: []          # {path, committed}
-ci: []
-sbom_files: []         # empty means none found
-entry_points: []
-sinks: { auth: [], sql: [], exec: [], template: [], path: [], ssrf: [], deser: [], crypto: [] }
-key_files: []          # max 10 {path, reason}
-trust_boundary_diagram: |
-  ...
-limitations: []
+```json
+{
+  "agent": "recon",
+  "languages": [],
+  "frameworks": [],
+  "web": false,
+  "ai": false,
+  "agent_loop": false,
+  "mcp": false,
+  "iac": false,
+  "multi_tenant": false,
+  "publishes": false,
+  "modules": [],
+  "package_managers": [],
+  "manifests": [],
+  "lockfiles": [],
+  "ci": [],
+  "sbom_files": [],
+  "vex_files": [],
+  "aibom_files": [],
+  "security_md": null,
+  "entry_points": [],
+  "sinks": { "auth": [], "sql": [], "exec": [], "template": [], "path": [], "ssrf": [], "deser": [], "crypto": [], "dynamic_import": [] },
+  "key_files": [],
+  "trust_boundary_diagram": "...",
+  "limitations": []
+}
 ```
+
+The key is `agent_loop`, not `agent`, because the packet's own `agent` key names the agent that wrote it. `modules` entries are `{ "name": "agentic", "owner": "security", "readers": ["reliability"] }`. `manifests` and `lockfiles` entries are `{ "path": "...", "committed": true }`. `key_files` entries are `{ "path": "...", "reason": "..." }`, at most 10. `sbom_files`, `vex_files`, `aibom_files` are empty when none are found. `security_md` is the path or null.

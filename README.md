@@ -6,12 +6,20 @@ loads Agent Skills. The skill reports findings and never edits your code.
 
 What it checks:
 
-- Security, against the OWASP Top 10:2025 list
+- Security, against the OWASP Top 10:2025 list (the current web edition; OWASP has not published a 2026 web list)
+- Repos that call a model or run an agent: the OWASP LLM Top 10:2026 and the OWASP Agentic Top 10 (ASI01 to ASI10), loaded only when recon finds an LLM SDK, an agent loop, or an MCP server
+- Infrastructure code, tenant isolation, and release evidence (provenance, SBOM, VEX, AIBOM, disclosure contact), each as an optional module that recon switches on
 - Supply chain: the lockfile inventory, whether releases carry an SBOM, and
   whether builds meet SLSA v1.2 provenance
 - Reliability: logs, traces, metrics, timeouts, retries, backpressure
 - Tests: what exists, what runs, and what the coverage misses
 - Accessibility triage, against WCAG 2.2 AA, for web projects only
+
+Findings are JSON. Two zero-dependency Node scripts check them: one validates each agent's packet, one validates the coverage ledger and that every finding points at a ledger unit. Node 18 or newer runs them.
+
+A second run on the same repo reads the earlier ledger and compares file hashes. Units whose files changed reopen. Units whose files did not change are still re-reviewed, and keep their prior fingerprints.
+
+A gap that an upstream control already blocks is a hardening note with no severity. Regulatory items (OMB M-26-15 post-quantum migration, OMB M-26-14 logging, the EU Cyber Resilience Act, the CISA 2026 SBOM minimum elements, NIST agent identity guidance) are tags on notes. They bind specific organizations, and a tag never raises severity.
 
 Every finding comes with a quoted excerpt, a severity score from a fixed
 matrix, and a citation. The audit discipline follows the Cloudflare
@@ -29,9 +37,12 @@ skill. Deep rules and browser checks live there, not here.
 SKILL.md                 orchestrator: scope, ledger, merge, report
 AGENTS.md                host instructions for this repo
 agents/_contract.md      safety rules, finding schema, severity matrix, execution tiers, source allowlist
-agents/recon.md          detects languages, frameworks, CI, and trust boundaries
+agents/recon.md          detects languages, frameworks, CI, trust boundaries, and which modules apply
 agents/security.md       OWASP Top 10:2025 and supply chain
-agents/reliability.md    observability and operational limits
+agents/reliability.md    observability, operational limits, fail-closed, agent action logging
+agents/modules/         ai-llm, agentic, iac, tenant-isolation, release-compliance
+schemas/                 JSON Schema for agent packets and the coverage ledger
+scripts/                 validate-recon.cjs, seed-ledger.cjs, validate-findings.cjs, update-ledger.cjs, validate-ledger.cjs, delta-ledger.cjs
 agents/a11y.md           WCAG 2.2 AA triage plus handoff to the wcag skill
 agents/test-runner.md    test discovery and coverage gaps
 ```
