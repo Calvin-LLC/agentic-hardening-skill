@@ -1,0 +1,79 @@
+{
+  "type": "object",
+  "required": ["agent", "languages", "frameworks", "web", "ai", "agent_loop", "mcp", "iac", "multi_tenant", "publishes", "modules", "package_managers", "manifests", "lockfiles", "ci", "sbom_files", "vex_files", "aibom_files", "security_md", "entry_points", "sinks", "key_files", "trust_boundary_diagram", "limitations"],
+  "additionalProperties": false,
+  "properties": {
+    "agent": { "enum": ["recon"] },
+    "languages": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+    "frameworks": { "type": "array", "items": { "type": "string" } },
+    "web": { "type": "boolean" },
+    "ai": { "type": "boolean" },
+    "agent_loop": { "type": "boolean" },
+    "mcp": { "type": "boolean" },
+    "iac": { "type": "boolean" },
+    "multi_tenant": { "type": "boolean" },
+    "publishes": { "type": "boolean" },
+    "modules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "owner", "readers"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "enum": ["ai-llm", "agentic", "iac", "tenant-isolation", "release-compliance"] },
+          "owner": { "enum": ["security", "reliability", "tests", "a11y"] },
+          "readers": { "type": "array", "items": { "enum": ["security", "reliability", "tests", "a11y"] } }
+        }
+      }
+    },
+    "package_managers": { "type": "array", "items": { "type": "string" } },
+    "manifests": { "$ref": "#/$defs/fileEntries" },
+    "lockfiles": { "$ref": "#/$defs/fileEntries" },
+    "ci": { "type": "array", "items": { "type": "string" } },
+    "sbom_files": { "type": "array", "items": { "type": "string" } },
+    "vex_files": { "type": "array", "items": { "type": "string" } },
+    "aibom_files": { "type": "array", "items": { "type": "string" } },
+    "security_md": { "type": ["string", "null"] },
+    "entry_points": { "type": "array", "items": { "type": "string" } },
+    "sinks": {
+      "type": "object",
+      "required": ["auth", "sql", "exec", "template", "path", "ssrf", "deser", "crypto", "dynamic_import"],
+      "additionalProperties": false,
+      "properties": {
+        "auth": { "$ref": "#/$defs/sinkList" },
+        "sql": { "$ref": "#/$defs/sinkList" },
+        "exec": { "$ref": "#/$defs/sinkList" },
+        "template": { "$ref": "#/$defs/sinkList" },
+        "path": { "$ref": "#/$defs/sinkList" },
+        "ssrf": { "$ref": "#/$defs/sinkList" },
+        "deser": { "$ref": "#/$defs/sinkList" },
+        "crypto": { "$ref": "#/$defs/sinkList" },
+        "dynamic_import": { "$ref": "#/$defs/sinkList" }
+      }
+    },
+    "key_files": {
+      "type": "array",
+      "maxItems": 10,
+      "items": {
+        "type": "object",
+        "required": ["path", "reason"],
+        "additionalProperties": false,
+        "properties": { "path": { "type": "string" }, "reason": { "type": "string", "maxLength": 300 } }
+      }
+    },
+    "trust_boundary_diagram": { "type": "string" },
+    "limitations": { "type": "array", "items": { "type": "string", "maxLength": 4096 } }
+  },
+  "$defs": {
+    "sinkList": { "type": "array", "maxItems": 10, "items": { "type": "string" } },
+    "fileEntries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "committed"],
+        "additionalProperties": false,
+        "properties": { "path": { "type": "string" }, "committed": { "type": "boolean" } }
+      }
+    }
+  }
+}

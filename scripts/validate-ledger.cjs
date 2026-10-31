@@ -3,8 +3,7 @@
 
 const fs = require("node:fs");
 const path = require("node:path");
-const crypto = require("node:crypto");
-const { readJson, validateAgainst, safeRelativePath, show, finish } = require("./lib/check.cjs");
+const { blobSha, readJson, validateAgainst, safeRelativePath, show, finish } = require("./lib/check.cjs");
 
 const usage = "usage: node validate-ledger.cjs <ledger.json> [--root <repo-dir>] [--check-hashes] [--packets <packet.json>...]";
 const args = process.argv.slice(2);
@@ -31,13 +30,6 @@ while (args.length) {
     process.stderr.write(`unknown argument ${show(flag)}\n${usage}\n`);
     process.exit(2);
   }
-}
-
-function gitBlobSha(content) {
-  const hash = crypto.createHash("sha1");
-  hash.update(`blob ${content.length}\0`);
-  hash.update(content);
-  return hash.digest("hex");
 }
 
 let ledger;
@@ -93,12 +85,20 @@ if (errors.length === 0) {
         continue;
       }
       if (!fs.realpathSync(full).startsWith(rootReal + path.sep)) bad(`reviewed path ${show(p)} resolves outside the repository`);
-      else if (checkHashes && u.evidence_hash[p] !== gitBlobSha(fs.readFileSync(full))) bad(`evidence_hash for ${show(p)} does not match the file on disk`);
+      else if (checkHashes && u.evidence_hash[p] !== blobSha(fs.readFileSync(full))) bad(`evidence_hash for ${show(p)} does not match the file on disk`);
     }
   }
 
-  const printOwner = new Map();
-  for (const u of ledger.units) for (const fp of u.fingerprints) printOwner.set(fp, u.control);
+  const printUnits = new Map();
+  for (const u of ledger.units) {
+    for (const fp of u.fingerprints) {
+      if (!printUnits.has(fp)) printUnits.set(fp, new Set());
+      printUnits.get(fp).add(u.control);
+    }
+  }
+  const coveredBy = new Map();
+  const printsSeen = new Set();
+  const packetAgents = new Set();
 
   for (const packetFile of packetFiles) {
     let packet;
@@ -112,7 +112,9 @@ if (errors.length === 0) {
       errors.push(`packet ${show(packetFile)}: not an agent packet`);
       continue;
     }
+    packetAgents.add(packet.agent);
     for (const row of packet.coverage) {
+      coveredBy.set(row.control, packet.agent);
       const unit = units.get(row.control);
       if (!unit) errors.push(`packet ${packet.agent}: coverage control ${row.control} is not a ledger unit`);
       else if (unit.owner !== packet.agent) errors.push(`packet ${packet.agent}: control ${row.control} is owned by ${unit.owner}`);
@@ -121,8 +123,21 @@ if (errors.length === 0) {
       const unit = units.get(f.control);
       if (!unit) errors.push(`finding ${f.id}: control ${f.control} is not a ledger unit`);
       else if (unit.owner !== f.agent) errors.push(`finding ${f.id}: control ${f.control} is owned by ${unit.owner}, not ${f.agent}`);
-      if (!printOwner.has(f.fingerprint)) errors.push(`finding ${f.id}: fingerprint ${f.fingerprint} is on no ledger unit`);
-      else if (printOwner.get(f.fingerprint) !== f.control) errors.push(`finding ${f.id}: fingerprint ${f.fingerprint} is on unit ${printOwner.get(f.fingerprint)}, not ${f.control}`);
+      printsSeen.add(f.fingerprint);
+      if (!printUnits.has(f.fingerprint)) errors.push(`finding ${f.id}: fingerprint ${f.fingerprint} is on no ledger unit`);
+      else if (!printUnits.get(f.fingerprint).has(f.control)) errors.push(`finding ${f.id}: fingerprint ${f.fingerprint} is not on its own control unit ${f.control}`);
+    }
+  }
+
+  if (packetFiles.length > 0) {
+    for (const u of ledger.units) {
+      if (["covered", "candidate", "blocked", "not_applicable"].includes(u.status)) {
+        if (!packetAgents.has(u.owner)) errors.push(`unit ${u.control}: status ${u.status} but no packet from owner ${u.owner} was supplied`);
+        else if (coveredBy.get(u.control) !== u.owner) errors.push(`unit ${u.control}: status ${u.status} but owner ${u.owner}'s packet has no coverage row for it`);
+      }
+      for (const fp of u.fingerprints) {
+        if (packetAgents.has(u.owner) && !printsSeen.has(fp)) errors.push(`unit ${u.control}: fingerprint ${fp} appears in no finding`);
+      }
     }
   }
 }

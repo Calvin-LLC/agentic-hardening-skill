@@ -1,6 +1,7 @@
 "use strict";
 
 const fs = require("node:fs");
+const crypto = require("node:crypto");
 const { TextDecoder } = require("node:util");
 
 const LIMITS = Object.freeze({ inputBytes: 5 * 1024 * 1024, depth: 64, errors: 100, text: 4096 });
@@ -112,4 +113,41 @@ function finish(label, file, errors) {
   process.exit(1);
 }
 
-module.exports = { LIMITS, readJson, validateAgainst, safeRelativePath, show, finish };
+function blobSha(content) {
+  const hash = crypto.createHash("sha1");
+  hash.update(`blob ${content.length}\0`);
+  hash.update(content);
+  return hash.digest("hex");
+}
+
+function priorStatuses(prior, root) {
+  const path = require("node:path");
+  const sameSource = (unit) =>
+    unit.deleted_paths.length === 0 &&
+    unit.reviewed_paths.every((p) => {
+      try {
+        const full = path.join(root, p);
+        return fs.lstatSync(full).isFile() && blobSha(fs.readFileSync(full)) === unit.evidence_hash[p];
+      } catch {
+        return false;
+      }
+    });
+  const out = {};
+  const counts = { same_source: 0, changed_source: 0, carried: 0 };
+  for (const u of prior.units) {
+    let status = "none";
+    if (u.status === "covered" || u.status === "candidate" || u.status === "not_applicable") {
+      const same = sameSource(u);
+      const kind = { covered: "covered", candidate: "open", not_applicable: "not_applicable" }[u.status];
+      status = `prior_${kind}_${same ? "same" : "changed"}_source`;
+      counts[same ? "same_source" : "changed_source"]++;
+    } else if (u.status === "blocked" || u.status === "deferred") {
+      status = `prior_${u.status}`;
+      counts.carried++;
+    }
+    out[u.control] = { prior_status: status, fingerprints: u.fingerprints, reviewed_paths: u.reviewed_paths };
+  }
+  return { out, counts };
+}
+
+module.exports = { priorStatuses, blobSha, LIMITS, readJson, validateAgainst, safeRelativePath, show, finish };

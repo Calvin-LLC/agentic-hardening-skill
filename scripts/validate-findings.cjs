@@ -1,14 +1,49 @@
 #!/usr/bin/env node
 "use strict";
 
+const fs = require("node:fs");
 const path = require("node:path");
 const { readJson, validateAgainst, safeRelativePath, show, finish } = require("./lib/check.cjs");
 
-const usage = "usage: node validate-findings.cjs <packet.json>";
-const file = process.argv[2];
-if (!file || process.argv.length !== 3) {
+const usage = "usage: node validate-findings.cjs <packet.json> [--root <repo-dir>]";
+const args = process.argv.slice(2);
+const file = args.shift();
+let root = process.cwd();
+if (!file || file.startsWith("--") || (args.length && (args[0] !== "--root" || args.length !== 2))) {
   process.stderr.write(`${usage}\n`);
   process.exit(2);
+}
+if (args.length) root = path.resolve(args[1]);
+
+const squash = (text) => String(text).replace(/\r/g, "").replace(/\s+/g, " ").trim();
+
+function excerptFound(excerpt, citedPaths) {
+  const segments = String(excerpt)
+    .split(/\.\.\.|\u2026|\*{3}REDACTED\*{3}|<redacted>|<value>/i)
+    .map(squash)
+    .filter((seg) => seg.length >= 8);
+  if (segments.length === 0) return false;
+  const windows = [];
+  for (const cited of citedPaths) {
+    const m = /^(.*?)(?::(\d+)(?:-(\d+))?)?$/.exec(cited);
+    const rel = m[1];
+    if (safeRelativePath(rel) === null) continue;
+    let text;
+    try {
+      text = fs.readFileSync(path.join(root, rel), "utf8").replace(/\r/g, "");
+    } catch {
+      continue;
+    }
+    if (m[2]) {
+      const lines = text.split("\n");
+      const start = Math.max(0, Number(m[2]) - 1 - 3);
+      const end = Math.min(lines.length, Number(m[3] || m[2]) + 3);
+      windows.push(squash(lines.slice(start, end).join("\n")));
+    } else {
+      windows.push(squash(text));
+    }
+  }
+  return segments.every((seg) => windows.some((w) => w.includes(seg)));
 }
 
 let packet;
@@ -45,6 +80,15 @@ if (errors.length === 0) {
     for (const p of f.affected.paths) {
       if (safeRelativePath(p) === null) bad(`affected path ${show(p)} is not a safe repository-relative path`);
     }
+
+    f.evidence.forEach((ev, j) => {
+      if (ev.type.startsWith("code-") && !excerptFound(ev.excerpt, f.affected.paths)) {
+        bad(`evidence[${j}] type ${ev.type}: excerpt is not a verbatim quote of the cited lines (a segment may be elided with ...)`);
+      }
+      if (ev.type === "absence-grep" && !/\b0\b/.test(ev.excerpt)) bad(`evidence[${j}] absence-grep must state the command and a hit count of 0`);
+    });
+    if (f.evidence.some((ev) => ev.type === "analysis" && ev.claim_type !== "inferred")) bad("analysis evidence must have claim_type inferred");
+    if (f.evidence.length > 0 && f.evidence.every((ev) => ev.type === "analysis")) bad("a finding cannot rest on analysis evidence alone");
 
     const has = (key) => Object.hasOwn(f, key);
     const cat = f.category;

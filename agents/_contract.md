@@ -90,7 +90,7 @@ Before any excerpt leaves an agent:
 Packets are JSON. Validate with `scripts/validate-findings.cjs`.
 
 `severity` ∈ `critical | high | medium | low | info`. Present only when `status` is `open`.
-`status` ∈ `open | needs-validation | hardening-note | not-applicable | blocked`
+`status` ∈ `open | needs-validation | hardening-note`. A control that does not apply or could not be assessed is a coverage row (`not-applicable`, `blocked`), never a finding.
 `confidence` ∈ `high | medium | low`
 `reachability` ∈ `confirmed | plausible | speculative | not-reachable`
 `evidence_quality` ∈ `strong | medium | weak`
@@ -129,8 +129,15 @@ Status rules:
 
 - `open`: has `severity`.
 - `needs-validation`: no `severity`. Carries `blockers` (the exact unresolved facts, one line each) and `validation_plan` (a safe check an owner can run or observe).
-- `hardening-note`: no `severity`. Carries `upstream_control` (the layer that already blocks the attack, with `file:line`) or a non-empty `regulatory` list, and nothing else that implies exploitability.
-- `not-applicable` and `blocked`: no `severity`; state the reason in `impact`.
+- `hardening-note`: no `severity`. Carries `upstream_control` or a non-empty `regulatory` list, and nothing else that implies exploitability. `upstream_control` names the layer that already stops this same attack, with `file:line`. A comment, a doc line, or a control for a different risk is not an upstream control. A note justified only by a regulatory tag omits `upstream_control`.
+
+Evidence rules, enforced by `scripts/validate-findings.cjs`:
+
+- Evidence of type `code-*` (`code-dataflow`, `code-auth`, `code-config`, `code-crypto`) is a verbatim quote of the cited lines, whitespace aside. The validator checks it against the file, within 3 lines of the cited range. Elide with `...`. Redact a secret value with `***REDACTED***`; the text around it must still match.
+- An absence claim ("no SBOM", "no tenant column") uses type `absence-grep`. The excerpt is the exact command and its hit count, for example `git grep -n -i sbom -- ':!docs' returned 0 hits`.
+- A fact from outside the repository uses type `deployment-probe`. It names who gathered it and where the raw output is kept. An agent never gathers one; the orchestrator supplies it.
+- Allowed evidence types are `code-<kind>` (for example `code-auth`, `code-config`, `code-schema`, `code-dataflow`), `absence-grep`, `deployment-probe`, and `analysis`. Nothing else validates.
+- `analysis` is a short reasoned step that joins quoted evidence ("SetAttributes merges by key, so a key removed here was already exported"). It must carry `claim_type: inferred` and may not stand alone: a finding needs at least one `code-*`, `absence-grep`, or `deployment-probe` entry beside it. A paraphrase of code is not evidence; quote it.
 
 Read 20+ lines of context before marking a finding. No grep-only finding above `low`. High/critical require a reproduction path or Source→Sink dataflow. Absence of evidence is not evidence of absence.
 
@@ -155,7 +162,7 @@ Defense-in-depth gaps are not vulnerabilities. If layer A already prevents the a
 
 ## Regulatory tags
 
-A finding or note may carry `regulatory`, a list drawn from `M-26-15` (post-quantum cryptography migration), `M-26-14` (risk-based logging), `BOD-26-04` (exploit-based prioritization), `CRA` (EU Cyber Resilience Act), `CISA-SBOM-2026` (2026 SBOM minimum elements), `NIST-agent-identity` (NIST agent identity design tenets). These bind specific organizations, not every repository. A tag adds context to the report. It never raises severity and never turns a hardening note into an open finding. Exploit evidence and the severity matrix decide severity.
+A finding or note may carry `regulatory`, a list drawn from `M-26-15` (post-quantum cryptography migration), `M-26-14` (risk-based logging), `BOD-26-04` (exploit-based prioritization), `CRA` (EU Cyber Resilience Act), `CISA-SBOM-2026` (2026 SBOM minimum elements), `NIST-agent-identity` (NIST agent identity design tenets; use it only when recon `agent_loop` or `mcp` is true). These bind specific organizations, not every repository. Report a missing release SBOM, provenance, VEX, or disclosure contact only when recon `publishes` is true. A tag adds context to the report. It never raises severity and never turns a hardening note into an open finding. Exploit evidence and the severity matrix decide severity.
 
 ## Candidate gate
 
@@ -169,7 +176,7 @@ The agent that checks a finding is never the agent that found it. Before the rep
 
 The orchestrator keeps a deterministic coverage ledger under `.tmp/harden/coverage-ledger.json`, validated with `scripts/validate-ledger.cjs`. One unit per control; each unit has one owner. Every in-scope control starts `planned`. Assigning it to an agent moves it to `in_progress`. A finished review with owned evidence moves it to `covered`, `candidate` (with linked fingerprints), or `blocked` (with unresolved facts). Units the budget cannot reach become `deferred` with a reason, never silently unassigned. Ledger values use underscores (`in_progress`, `not_applicable`, `out_of_scope`); finding statuses use hyphens.
 
-Each unit records `reviewed_paths` (regular files only, no directories or globs) and `evidence_hash`, a map from each reviewed path to `git hash-object --no-filters -- <path>` (the exact bytes on disk, so line-ending settings cannot change it). A deleted file goes in the unit's `deleted_paths` and counts as changed. The ledger records `base_commit` and `dirty` (true when `git status --porcelain` is non-empty); a dirty run says so in its coverage statement. Prior runs feed the next plan: unchanged prior evidence still re-verifies through the current path, changed source re-opens the unit, and prior `needs-validation`, `deferred`, `blocked`, and rejected states are work input, never suppression keys.
+Each unit records `reviewed_paths` (regular files only, no directories or globs) and `evidence_hash`, a map from each reviewed path to `git hash-object --no-filters -- <path>` (the exact bytes on disk, so line-ending settings cannot change it). A deleted file goes in the unit's `deleted_paths` and counts as changed. The ledger records `base_commit` and `dirty` (true when `git status --porcelain -- . ':!.tmp'` is non-empty); a dirty run says so in its coverage statement. Prior runs feed the next plan: unchanged prior evidence still re-verifies through the current path, changed source re-opens the unit, and prior `needs-validation`, `deferred`, `blocked`, and rejected states are work input, never suppression keys.
 
 ## Fingerprints
 
@@ -192,7 +199,7 @@ Every specialist writes `.tmp/harden/<agent>/findings.json` and returns only thi
 }
 ```
 
-`disposition` ∈ `assessed | not-applicable | not-assessable | blocked`. Every `coverage[].control` is a ledger unit the agent owns. The orchestrator maps `assessed` to ledger `covered` (or `candidate` when findings are linked), `not-assessable` and `blocked` to `blocked`, and `not-applicable` to `not_applicable`.
+`disposition` ∈ `assessed | not-applicable | not-assessable | blocked`. Every `coverage[].control` is a ledger unit the agent owns. `evidence_refs` holds repository-relative file paths only, with no line suffix, at most 20 per control: the files the agent actually read to reach the disposition. The orchestrator turns them into the unit's `reviewed_paths`. A `not-assessable` or `blocked` row needs at least one `limitations` line saying why. The orchestrator maps `assessed` to ledger `covered` (or `candidate` when findings are linked), `not-assessable` and `blocked` to `blocked`, and `not-applicable` to `not_applicable`.
 
 Stop conditions: cap key-file lists at 10 paths; cap findings per control at 25 (summarize the rest); do not glob unbounded vendor/minified trees (`node_modules`, `vendor`, `dist`, `.git`).
 
