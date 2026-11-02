@@ -117,6 +117,8 @@ A fresh pass re-reads every cited source location and tries to refute each candi
 
 ### 6. Report
 
+Write the report with `node <skill-dir>/scripts/render-report.cjs --dir .tmp/harden --project <name> --out .tmp/harden/REPORT.md --validators-ran` (drop `--validators-ran` when node was missing, and the report then says `validators not run`). The script reads the ledger, the profile, and the packets, so the counts cannot drift from them. The outline below is what it produces.
+
 ```markdown
 # Hardening Report: [Project] @ [commit], depth [quick|standard|deep], [scope]
 

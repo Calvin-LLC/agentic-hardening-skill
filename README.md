@@ -37,7 +37,7 @@ agents/security.md       OWASP Top 10:2025 and supply chain
 agents/reliability.md    observability, operational limits, fail-closed, agent action logging
 agents/modules/         ai-llm, agentic, iac, tenant-isolation, release-compliance
 schemas/                 JSON Schema for agent packets and the coverage ledger
-scripts/                 validate-recon.cjs, seed-ledger.cjs, validate-findings.cjs, update-ledger.cjs, validate-ledger.cjs, delta-ledger.cjs
+scripts/                 validate-recon.cjs, seed-ledger.cjs, validate-findings.cjs, update-ledger.cjs, validate-ledger.cjs, delta-ledger.cjs, render-report.cjs
 agents/test-runner.md    test discovery and coverage gaps
 ```
 

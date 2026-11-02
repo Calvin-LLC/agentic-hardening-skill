@@ -70,7 +70,7 @@ Key files to read: at most 10 paths, each with a one-line reason. Paths must res
 
 ## Output
 
-Write `.tmp/harden/recon/profile.json`, check it with `node <skill-dir>/scripts/validate-recon.cjs .tmp/harden/recon/profile.json`, and print the same packet.
+Write `.tmp/harden/recon/profile.json` and check it with `node <skill-dir>/scripts/validate-recon.cjs .tmp/harden/recon/profile.json`. Sink entries are repository-relative paths; a `:line` suffix is allowed. If the caller asks for a different reply shape, return that shape and leave the packet in the file.
 
 ```json
 {
