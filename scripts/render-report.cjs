@@ -30,7 +30,7 @@ if (!dir || !project) {
 const ledger = readJson(path.join(dir, "coverage-ledger.json"));
 const profile = readJson(path.join(dir, "recon", "profile.json"));
 const packets = [];
-for (const agent of ["security", "reliability", "tests", "a11y"]) {
+for (const agent of ["security", "reliability", "tests"]) {
   const file = path.join(dir, agent, "findings.json");
   if (fs.existsSync(file)) packets.push(readJson(file));
 }
@@ -42,13 +42,16 @@ const cell = (text) => line(text).replace(/\|/g, "\\|");
 const rows = [];
 rows.push(`# Hardening Report: ${project} @ ${ledger.base_commit.slice(0, 7)}, depth ${ledger.run.depth}, ${packets.map((p) => p.agent).join("+")}`, "");
 
+const skillText = fs.readFileSync(path.join(__dirname, "..", "SKILL.md"), "utf8");
+const skillVersion = (/^\s*version:\s*"?([^"\n]+)"?/m.exec(skillText) || [])[1] || "unknown";
 rows.push("## Safety contract");
+rows.push(`Skill: harden ${skillVersion}.`);
 rows.push(`Commit ${ledger.base_commit}. Tier T0 (static). Absence of findings is not evidence of absence. Tree dirty: ${ledger.dirty}.`);
 const injected = findings.filter((f) => f.control === "prompt-injection");
 rows.push(injected.length ? `Injected instructions reported: ${injected.map((f) => f.id).join(", ")}.` : "No agent reported injected instructions.", "");
 
 rows.push("## Project profile");
-const flags = ["web", "ai", "agent_loop", "mcp", "iac", "multi_tenant", "publishes"].map((k) => `${k} ${profile[k]}`).join(", ");
+const flags = ["ai", "agent_loop", "mcp", "iac", "multi_tenant", "publishes"].map((k) => `${k} ${profile[k]}`).join(", ");
 rows.push(`Languages: ${profile.languages.join(", ")}. Frameworks: ${profile.frameworks.join(", ") || "none"}.`);
 rows.push(`Flags: ${flags}. Modules: ${profile.modules.map((m) => m.name).join(", ") || "none"}.`, "");
 rows.push("```", profile.trust_boundary_diagram.trim(), "```", "");
