@@ -1,12 +1,11 @@
 {
   "type": "object",
-  "required": ["agent", "languages", "frameworks", "web", "ai", "agent_loop", "mcp", "iac", "multi_tenant", "publishes", "modules", "package_managers", "manifests", "lockfiles", "ci", "sbom_files", "vex_files", "aibom_files", "security_md", "entry_points", "sinks", "key_files", "trust_boundary_diagram", "limitations"],
+  "required": ["agent", "languages", "frameworks", "ai", "agent_loop", "mcp", "iac", "multi_tenant", "publishes", "modules", "package_managers", "manifests", "lockfiles", "ci", "sbom_files", "vex_files", "aibom_files", "security_md", "entry_points", "sinks", "key_files", "trust_boundary_diagram", "limitations"],
   "additionalProperties": false,
   "properties": {
     "agent": { "enum": ["recon"] },
     "languages": { "type": "array", "minItems": 1, "items": { "type": "string" } },
     "frameworks": { "type": "array", "items": { "type": "string" } },
-    "web": { "type": "boolean" },
     "ai": { "type": "boolean" },
     "agent_loop": { "type": "boolean" },
     "mcp": { "type": "boolean" },
@@ -21,8 +20,8 @@
         "additionalProperties": false,
         "properties": {
           "name": { "enum": ["ai-llm", "agentic", "iac", "tenant-isolation", "release-compliance"] },
-          "owner": { "enum": ["security", "reliability", "tests", "a11y"] },
-          "readers": { "type": "array", "items": { "enum": ["security", "reliability", "tests", "a11y"] } }
+          "owner": { "enum": ["security", "reliability", "tests"] },
+          "readers": { "type": "array", "items": { "enum": ["security", "reliability", "tests"] } }
         }
       }
     },

@@ -6,7 +6,6 @@ Portable hardening skill. Orchestrator in `SKILL.md`. Shared contract in `agents
 
 - Audit is read-only except `.tmp/harden/`.
 - Every finding uses the contract schema and severity matrix.
-- Do not load `agents/a11y.md` unless recon set `web: true`.
 - Fixes require a follow-up that names finding IDs.
 - Load a file under `agents/modules/` only when recon's `modules` lists it.
 - Packets are JSON. `node scripts/validate-findings.cjs <packet>` and `node scripts/validate-ledger.cjs <ledger> [--packets <packet>...]` must exit 0 before a run reports.

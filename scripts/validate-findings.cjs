@@ -95,7 +95,6 @@ if (errors.length === 0) {
     if (f.agent === "security") {
       if (!cat.owasp_2025 && !cat.llm_2026 && !cat.asi_2026) bad("security finding needs at least one of owasp_2025, llm_2026, asi_2026");
     }
-    if (f.agent === "a11y" && !(cat.wcag && cat.wcag.length)) bad("a11y finding needs category.wcag");
 
     if (f.status === "open") {
       if (!has("severity")) bad("status open needs severity");

@@ -5,7 +5,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { priorStatuses, readJson, validateAgainst, show } = require("./lib/check.cjs");
 
-const usage = "usage: node seed-ledger.cjs <profile.json> --out <ledger.json> [--agents security,reliability,tests,a11y] [--depth quick|standard|deep] [--root <repo-dir>] [--prior <prior-ledger.json>]";
+const usage = "usage: node seed-ledger.cjs <profile.json> --out <ledger.json> [--agents security,reliability,tests] [--depth quick|standard|deep] [--root <repo-dir>] [--prior <prior-ledger.json>]";
 const args = process.argv.slice(2);
 const profileFile = args.shift();
 if (!profileFile || profileFile.startsWith("--")) {
@@ -16,7 +16,7 @@ let out = null;
 let root = process.cwd();
 let depth = "standard";
 let priorFile = null;
-let agents = ["security", "reliability", "tests", "a11y"];
+let agents = ["security", "reliability", "tests"];
 while (args.length) {
   const flag = args.shift();
   const value = args.shift();
@@ -46,7 +46,6 @@ const CONTROLS = [
   { owner: "security", module: "release-compliance", ids: ["REL-PROVENANCE", "REL-SBOM", "REL-VEX", "REL-AIBOM", "REL-CVD"] },
   { owner: "reliability", ids: ["structured-logging", "correlation", "redaction", "bounds", "idempotency", "races", "fail-closed"] },
   { owner: "tests", ids: ["tests"] },
-  { owner: "a11y", needs: "web", ids: ["perceivable", "operable", "understandable", "robust", "wcag-2.2-new"] },
 ];
 
 const profile = readJson(profileFile);

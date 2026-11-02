@@ -92,8 +92,7 @@
           "enum": [
             "security",
             "reliability",
-            "tests",
-            "a11y"
+            "tests"
           ]
         },
         "status": {

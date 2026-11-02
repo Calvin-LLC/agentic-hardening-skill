@@ -33,8 +33,6 @@ Also note: `biome.json`, `eslint.config.*` (flat; `.eslintrc*` is legacy), PEP 7
 
 Frameworks from the primary manifest (React, Next, Express, Fastify, Nest, Vue, Svelte, Django, Flask, FastAPI, Rails, Spring, ASP.NET, Gin, Axum, etc.).
 
-Set `web: true` if HTML/JSX/TSX/Vue/Svelte/Astro/ERB/PHP templates exist outside docs. Otherwise `web: false`.
-
 Set `ai: true` if the repo calls a large language or other generative model, builds retrieval, or ships prompt text written for one (even when the call is stubbed): an LLM SDK (`openai`, `anthropic`, `@google/genai`, `ollama`, `litellm`), RAG or vector stores, embeddings, or prompt files. A classic local model (YOLO, scikit-learn, ONNX classifier) with no prompt is not `ai`; note it in `limitations`. Otherwise `ai: false`.
 
 Set `agent_loop: true` if a model's output chooses which tool to call or which step comes next: a tool-calling loop, an agent framework (`langgraph`, `crewai`, `autogen`, `pydantic-ai`, `mastra`, `openai-agents`), or agent-to-agent messaging. Set `mcp: true` if the repo implements or consumes an MCP server (`@modelcontextprotocol/sdk`, `mcp`, `fastmcp`, an `mcp.json`, or `.mcp/` config). `agent_loop: true` implies `ai: true`. A repo that only calls a model once per request has `ai: true` and `agent: false`.
@@ -79,7 +77,6 @@ Write `.tmp/harden/recon/profile.json`, check it with `node <skill-dir>/scripts/
   "agent": "recon",
   "languages": [],
   "frameworks": [],
-  "web": false,
   "ai": false,
   "agent_loop": false,
   "mcp": false,

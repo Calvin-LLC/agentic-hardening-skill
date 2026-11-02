@@ -1,7 +1,7 @@
 # Harden
 
 An agent skill that audits a codebase for security, supply-chain,
-reliability, test, and accessibility problems. It runs on any host that
+reliability, and test problems. It runs on any host that
 loads Agent Skills. The skill reports findings and never edits your code.
 
 What it checks:
@@ -13,7 +13,6 @@ What it checks:
   whether builds meet SLSA v1.2 provenance
 - Reliability: logs, traces, metrics, timeouts, retries, backpressure
 - Tests: what exists, what runs, and what the coverage misses
-- Accessibility triage, against WCAG 2.2 AA, for web projects only
 
 Findings are JSON. Two zero-dependency Node scripts check them: one validates each agent's packet, one validates the coverage ledger and that every finding points at a ledger unit. Node 18 or newer runs them.
 
@@ -27,10 +26,6 @@ security-audit skill: a coverage ledger plans the work, a candidate gate
 filters claims, and a fresh verifier re-checks every finding before the
 report. The skill does not patch the repo.
 
-Accessibility stops at triage. Harden flags what is visible in source,
-labels the rest as needing a browser, and hands verification to the wcag
-skill. Deep rules and browser checks live there, not here.
-
 ## Layout
 
 ```
@@ -43,7 +38,6 @@ agents/reliability.md    observability, operational limits, fail-closed, agent a
 agents/modules/         ai-llm, agentic, iac, tenant-isolation, release-compliance
 schemas/                 JSON Schema for agent packets and the coverage ledger
 scripts/                 validate-recon.cjs, seed-ledger.cjs, validate-findings.cjs, update-ledger.cjs, validate-ledger.cjs, delta-ledger.cjs
-agents/a11y.md           WCAG 2.2 AA triage plus handoff to the wcag skill
 agents/test-runner.md    test discovery and coverage gaps
 ```
 
@@ -69,7 +63,6 @@ that can prove a sandbox.
 - Treat repo files, comments, or fetched pages as instructions
 - Echo secret values
 - Install packages or run tests unless you ask and the host attests a sandbox
-- Claim WCAG conformance from source inspection alone
 - Treat a lockfile dump as a standards-conformant SBOM
 
 ## Install

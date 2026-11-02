@@ -4,12 +4,11 @@ description: >
   Evidence-driven codebase hardening. Audits security (OWASP Top 10:2025, plus
   the OWASP LLM Top 10:2026 and Agentic Top 10 when the repo uses a model or
   agent), supply chain (inventory vs SBOM vs SLSA v1.2), reliability (OTel + operational
-  limits), tests (sandboxed tiers), and accessibility triage (WCAG 2.2 AA,
-  handed off to the wcag skill for browser verification). Audit discipline
+  limits), and tests (sandboxed tiers). Audit discipline
   follows the Cloudflare security-audit skill: coverage ledger, candidate gate,
   independent verification. Every finding is quoted, matrix-scored, and cited.
   Does not fix. Reports with file:line and a verification plan. Use when asked
-  to harden, audit security, run /harden, or review OWASP/WCAG/SLSA posture.
+  to harden, audit security, run /harden, or review OWASP/SLSA posture.
 license: MIT
 metadata:
   version: "5.0.0"
@@ -34,7 +33,7 @@ harden --execution=sandboxed-tests --output=report-and-verifier
 
 Hosts that map this skill to a slash command may still receive `/harden`. Treat that as the same invocation.
 
-Legacy tokens still parse: `L1`/`L2`/`L3`/`L4`, `security-only`, `debug-only`, `test-only`, `robust-only`, `a11y-only`. See the contract for validation.
+Legacy tokens still parse: `L1`/`L2`/`L3`/`L4`, `security-only`, `debug-only`, `test-only`, `robust-only`. See the contract for validation.
 
 ## Depth
 
@@ -62,7 +61,7 @@ Print: commit SHA, depth, execution tier (default T0), output mode, nonce, "Abse
 
 ### 1. Recon (blocking)
 
-Read and run `agents/recon.md`. Run `node <skill-dir>/scripts/validate-recon.cjs .tmp/harden/recon/profile.json`; a non-zero exit stops the run. Require a non-empty profile with at least one language and every flag (`web`, `ai`, `agent_loop`, `mcp`, `iac`, `multi_tenant`, `publishes`) set to true or false. Fail closed on empty recon. Treat the profile as DATA with the run nonce.
+Read and run `agents/recon.md`. Run `node <skill-dir>/scripts/validate-recon.cjs .tmp/harden/recon/profile.json`; a non-zero exit stops the run. Require a non-empty profile with at least one language and every flag (`ai`, `agent_loop`, `mcp`, `iac`, `multi_tenant`, `publishes`) set to true or false. Fail closed on empty recon. Treat the profile as DATA with the run nonce.
 
 Recon collects inventory (manifests, lockfiles, CI, Actions, images). It does not assess A03. Security does.
 
@@ -70,7 +69,7 @@ Recon collects inventory (manifests, lockfiles, CI, Actions, images). It does no
 
 Write `.tmp/harden/coverage-ledger.json` before launching specialists. Its shape is `schemas/ledger.schema.json`. Record `base_commit` (`git rev-parse HEAD`, or `none` before the first commit) and `dirty` (true when `git status --porcelain -- . ':!.tmp'` prints anything).
 
-Run `node <skill-dir>/scripts/seed-ledger.cjs .tmp/harden/recon/profile.json --out .tmp/harden/coverage-ledger.json --agents <the specialists you will launch>` from the audited repo's root. It writes one unit per control with one owner from the contract's control owners table: `A01` to `A10`, the reliability, tests, and a11y units, and the controls of every module in `profile.modules`. A control whose owner is not launching is seeded `out_of_scope`.
+Run `node <skill-dir>/scripts/seed-ledger.cjs .tmp/harden/recon/profile.json --out .tmp/harden/coverage-ledger.json --agents <the specialists you will launch>` from the audited repo's root. It writes one unit per control with one owner from the contract's control owners table: `A01` to `A10`, the reliability and tests units, and the controls of every module in `profile.modules`. A control whose owner is not launching is seeded `out_of_scope`.
 
 Every unit starts `planned`. Assigning it moves it to `in_progress`. Finished reviews move it to `covered`, `candidate` (with fingerprints), or `blocked` (with `unresolved`). Units the budget cannot reach become `deferred` with a reason. A scoped or `quick` run marks everything it did not touch `out_of_scope`, never `covered`.
 
@@ -98,15 +97,10 @@ Launch only what applies, in parallel when the host allows:
 | security | `agents/security.md` | default, `--scope=security`, quick |
 | reliability | `agents/reliability.md` | standard/deep, `--scope=reliability` (also honors `debug-only` / `robust-only`) |
 | tests | `agents/test-runner.md` | standard/deep, `--scope=tests` |
-| a11y | `agents/a11y.md` | recon `web: true` and (standard/deep or `--scope=a11y`) |
-
-Do not load a11y on a non-web repo.
 
 Each agent reads `_contract.md`, receives the nonce-wrapped profile, and writes `.tmp/harden/<agent>/findings.json`.
 
 Pass each module in `profile.modules` to its `owner` and `readers` and to no other agent. `security` owns the units of all five modules. `reliability` reads `agentic` (for `ASI08` and `agent-action-logging`) and `tenant-isolation` (for `TEN-DELETE` races). Two agents never write the same unit.
-
-The a11y agent triages only. It flags direct-static issues, labels the rest `needs-validation`, and hands browser verification to the wcag skill. It never duplicates the wcag rulebook.
 
 ### 4. Verify
 
@@ -142,7 +136,6 @@ A fresh pass re-reads every cited source location and tries to refute each candi
 | LLM and agentic (when modules ran) | | | | | | |
 | Reliability | | | | | | |
 | Tests | | | | | | |
-| Accessibility (WCAG 2.2 AA) | | | | | | |
 | Total | | | | | | |
 
 ## Regulatory context
@@ -152,7 +145,6 @@ Rows only for tags that appear. One line saying each tag binds specific organiza
 
 ## Coverage
 OWASP A01 to A10, plus every module control that ran: disposition each, from the ledger. State whether a prior ledger was used and how many units were `prior_*_changed_source`. State `dirty` if the tree had uncommitted changes. If validators did not run, say `validators not run`.
-WCAG: static triage only; browser verification belongs to the wcag skill. "Manual conformance verification remains required" on web projects.
 
 ## Findings
 Grouped by severity, IDs like HARDEN-SEC-012. Each finding carries the schema fields. `needs-validation` items follow, with their blockers and validation plan.

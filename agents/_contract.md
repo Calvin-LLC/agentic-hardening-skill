@@ -20,7 +20,7 @@ The invocation arguments (the user message after the skill name) may contain, in
 - `--depth=quick|standard|deep` (default `standard`). Aliases: `L1`=`quick`, `L2`=`standard`, `L3`/`L4`=`deep`.
 - `--execution=static|sandboxed-tests` (default `static` = T0).
 - `--output=summary|report|report-and-verifier` (default `report`). `report-and-verifier` is an explicit write of a verifier under `.tmp/harden/` only.
-- `--scope=security,reliability,tests,a11y,supply-chain` or legacy `security-only` / `test-only` / `robust-only` / `debug-only` / `a11y-only`.
+- `--scope=security,reliability,tests,supply-chain` or legacy `security-only` / `test-only` / `robust-only` / `debug-only`.
 - A relative directory such as `src/auth`.
 
 Path allowlist: `^[A-Za-z0-9._/-]{1,200}$`. Then resolve and assert the result is under the repo root. Reject `..`, absolute paths, drive letters, shell metacharacters, and symlink escapes.
@@ -45,7 +45,7 @@ T1+ required host capabilities: allowlisted command, timeout, CPU/RAM/disk/proce
 
 Fetch in this order. Log every fetch under `.tmp/harden/sources.json`.
 
-1. Primary: `owasp.org`, `cheatsheetseries.owasp.org`, `cwe.mitre.org`, `w3.org/TR/WCAG22`, `w3.org/WAI/standards-guidelines/wcag/new-in-22`, `pages.nist.gov/800-63`, `slsa.dev`, `opentelemetry.io`, `openssf.org`, `genai.owasp.org`, `nist.gov`, `cisa.gov`, `whitehouse.gov`, `digital-strategy.ec.europa.eu`, `enisa.europa.eu`, `cyclonedx.org`, `spdx.dev`
+1. Primary: `owasp.org`, `cheatsheetseries.owasp.org`, `cwe.mitre.org`, `pages.nist.gov/800-63`, `slsa.dev`, `opentelemetry.io`, `openssf.org`, `genai.owasp.org`, `nist.gov`, `cisa.gov`, `whitehouse.gov`, `digital-strategy.ec.europa.eu`, `enisa.europa.eu`, `cyclonedx.org`, `spdx.dev`
 2. Vendor docs for the detected language/framework and package registry docs
 3. Secondary, labeled `[secondary]`: MDN and well-known hardening guides
 
@@ -95,7 +95,7 @@ Packets are JSON. Validate with `scripts/validate-findings.cjs`.
 `reachability` ∈ `confirmed | plausible | speculative | not-reachable`
 `evidence_quality` ∈ `strong | medium | weak`
 
-`control` is the ledger unit the finding belongs to (`A01`, `ASI02`, `IAC-IAM`, `fail-closed`). `category` names the standards the finding maps to. A security finding sets at least one of `owasp_2025`, `llm_2026`, `asi_2026`, and several may be set. An a11y finding sets `wcag` (a list such as `["1.4.3"]`). Reliability and tests findings may leave all of them empty unless the issue is security-relevant. Example of several: an MCP tool that runs unsanitized shell input is `asi_2026: ASI05` and `owasp_2025: A05`. A finding under a module control sets `owasp_2025` from that module's mapping, so `IAC-IAM` carries `owasp_2025: A02`. A reliability finding that is also security-relevant (a fail-open auth path) keeps `control: fail-closed` and sets `owasp_2025: A10`.
+`control` is the ledger unit the finding belongs to (`A01`, `ASI02`, `IAC-IAM`, `fail-closed`). `category` names the standards the finding maps to. A security finding sets at least one of `owasp_2025`, `llm_2026`, `asi_2026`, and several may be set. Reliability and tests findings may leave all of them empty unless the issue is security-relevant. Example of several: an MCP tool that runs unsanitized shell input is `asi_2026: ASI05` and `owasp_2025: A05`. A finding under a module control sets `owasp_2025` from that module's mapping, so `IAC-IAM` carries `owasp_2025: A02`. A reliability finding that is also security-relevant (a fail-open auth path) keeps `control: fail-closed` and sets `owasp_2025: A10`.
 
 ```json
 {
@@ -103,7 +103,7 @@ Packets are JSON. Validate with `scripts/validate-findings.cjs`.
   "title": "Missing server-side ownership check on invoice download",
   "agent": "security",
   "control": "A01",
-  "category": { "owasp_2025": "A01", "llm_2026": null, "asi_2026": null, "wcag": [], "cwe": ["CWE-862", "CWE-639"] },
+  "category": { "owasp_2025": "A01", "llm_2026": null, "asi_2026": null, "cwe": ["CWE-862", "CWE-639"] },
   "fingerprint": "invoices-download-missing-tenant-scope",
   "severity": "high",
   "status": "open",
@@ -216,7 +216,6 @@ Recon output is schema-validated. Paths must resolve under the repo root. No fre
 | Logs, traces, metrics, redaction, cardinality, correlation | reliability (observability) | security A09 only for security-event logging/alerting |
 | Timeouts, retries, cancellation, backpressure, races, leaks, fail-closed | reliability (operations) | security A10 only when the safety property is security-relevant |
 | Tests, coverage, execution | tests | |
-| WCAG 2.2 static triage + handoff to the wcag skill | a11y | only if recon `web: true`; deep rules and browser verification belong to the wcag skill |
 
 ## OWASP Top 10:2025 names
 
@@ -272,13 +271,6 @@ Each ledger control has exactly one owner. Two agents never write the same unit.
 | `A01` to `A10`, `LLM01` to `LLM10`, `ASI01` to `ASI07`, `ASI09`, `ASI10`, `IAC-*`, `TEN-*`, `REL-*` | security |
 | `ASI08`, `structured-logging`, `correlation`, `redaction`, `bounds`, `idempotency`, `races`, `fail-closed`, `agent-action-logging` | reliability |
 | `tests` | tests |
-| `perceivable`, `operable`, `understandable`, `robust`, `wcag-2.2-new` | a11y |
-
-## WCAG facts
-
-WCAG 2.2 has 86 success criteria (WCAG 2.1 had 78; 2.2 added 9 and removed 4.1.1 Parsing). Default baseline is Level A + AA. Do not claim all applicable criteria were assessed from source inspection. Static assessment plus a human test plan is the honest output.
-
-Large text for 1.4.3 is 18pt (24px) or 14pt bold (18.66px). Contrast 4.5:1 normal, 3:1 large. Do not treat multiple `<h1>`, `px` vs `rem`, or missing React `key` as WCAG failures.
 
 ## SLSA
 

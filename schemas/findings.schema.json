@@ -14,8 +14,7 @@
       "enum": [
         "security",
         "reliability",
-        "tests",
-        "a11y"
+        "tests"
       ]
     },
     "scope": {
@@ -93,40 +92,6 @@
         "maxLength": 4096
       }
     },
-    "handoff": {
-      "type": "object",
-      "required": [
-        "skill",
-        "checks",
-        "entry_points"
-      ],
-      "additionalProperties": false,
-      "properties": {
-        "skill": {
-          "enum": [
-            "wcag"
-          ]
-        },
-        "checks": {
-          "type": "array",
-          "items": {
-            "enum": [
-              "tree",
-              "keyboard",
-              "contrast",
-              "targets",
-              "reflow"
-            ]
-          }
-        },
-        "entry_points": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        }
-      }
-    },
     "tier": {
       "enum": [
         "T0",
@@ -196,8 +161,7 @@
           "enum": [
             "security",
             "reliability",
-            "tests",
-            "a11y"
+            "tests"
           ]
         },
         "control": {
@@ -228,13 +192,6 @@
                 "null"
               ],
               "pattern": "^ASI(0[1-9]|10)$"
-            },
-            "wcag": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "pattern": "^[1-4]\\.[0-9]+\\.[0-9]+$"
-              }
             },
             "cwe": {
               "type": "array",
@@ -400,8 +357,7 @@
             "enum": [
               "security",
               "reliability",
-              "tests",
-              "a11y"
+              "tests"
             ]
           }
         },
@@ -431,11 +387,6 @@
               "NIST-agent-identity"
             ]
           }
-        },
-        "handoff": {
-          "enum": [
-            "wcag"
-          ]
         }
       }
     }
