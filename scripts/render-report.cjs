@@ -40,13 +40,13 @@ const line = (text) => String(text).replace(/\s+/g, " ").trim();
 const cell = (text) => line(text).replace(/\|/g, "\\|");
 
 const rows = [];
-rows.push(`# Hardening Report: ${project} @ ${ledger.base_commit.slice(0, 7)}, depth ${ledger.run.depth}, ${packets.map((p) => p.agent).join("+")}`, "");
+rows.push(`# Hardening Report: ${project} @ ${ledger.base_commit.slice(0, 7)}`, "");
 
 const skillText = fs.readFileSync(path.join(__dirname, "..", "SKILL.md"), "utf8");
 const skillVersion = (/^\s*version:\s*"?([^"\n]+)"?/m.exec(skillText) || [])[1] || "unknown";
 rows.push("## Safety contract");
 rows.push(`Skill: harden ${skillVersion}.`);
-rows.push(`Commit ${ledger.base_commit}. Tier T0 (static). Absence of findings is not evidence of absence. Tree dirty: ${ledger.dirty}.`);
+rows.push(`Commit ${ledger.base_commit}. Absence of findings is not evidence of absence. Tree dirty: ${ledger.dirty}.`);
 const injected = findings.filter((f) => f.control === "prompt-injection");
 rows.push(injected.length ? `Injected instructions reported: ${injected.map((f) => f.id).join(", ")}.` : "No agent reported injected instructions.", "");
 
@@ -90,8 +90,6 @@ const changed = ledger.units.filter((u) => /_changed_source$/.test(u.prior_statu
 rows.push("## Coverage");
 rows.push(`Ledger: ${ledger.units.length} units. ${Object.entries(counts).map(([k, v]) => `${k} ${v}`).join(", ")}.`);
 rows.push(ledger.run.prior_ledger ? `A prior ledger was used. ${changed} units had changed source.` : "No prior ledger: this is a first run, and one run does not exhaust the target.");
-const outOfScope = ledger.units.filter((u) => u.status === "out_of_scope").map((u) => u.control);
-if (outOfScope.length) rows.push(`Not launched, so not covered: ${outOfScope.join(", ")}.`);
 rows.push(validatorsRan ? "Validators ran with exit 0: validate-recon, validate-findings per packet, update-ledger, validate-ledger with --check-hashes and --packets. They prove format and ledger consistency only." : "validators not run");
 const na = ledger.units.filter((u) => u.status === "not_applicable").map((u) => u.control);
 if (na.length) rows.push(`Not applicable: ${na.join(", ")}.`);
@@ -130,7 +128,7 @@ for (const f of notes) {
 rows.push("");
 
 rows.push("## Execution trace");
-rows.push("Static T0 only. The agents ran no project code, tests, or package managers and fetched nothing. Deployment facts come from files the orchestrator supplied.", "");
+rows.push("Static review only. The agents ran no project code, tests, or package managers and used no network.", "");
 
 rows.push("## Remediation plan");
 rows.push("No patches applied.");

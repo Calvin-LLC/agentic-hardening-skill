@@ -5,7 +5,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { priorStatuses, readJson, validateAgainst, show } = require("./lib/check.cjs");
 
-const usage = "usage: node seed-ledger.cjs <profile.json> --out <ledger.json> [--agents security,reliability,tests] [--depth quick|standard|deep] [--root <repo-dir>] [--prior <prior-ledger.json>]";
+const usage = "usage: node seed-ledger.cjs <profile.json> --out <ledger.json> [--root <repo-dir>] [--prior <prior-ledger.json>]";
 const args = process.argv.slice(2);
 const profileFile = args.shift();
 if (!profileFile || profileFile.startsWith("--")) {
@@ -14,17 +14,13 @@ if (!profileFile || profileFile.startsWith("--")) {
 }
 let out = null;
 let root = process.cwd();
-let depth = "standard";
 let priorFile = null;
-let agents = ["security", "reliability", "tests"];
 while (args.length) {
   const flag = args.shift();
   const value = args.shift();
   if (flag === "--out") out = value;
   else if (flag === "--root") root = path.resolve(value || ".");
-  else if (flag === "--depth") depth = value;
   else if (flag === "--prior") priorFile = value;
-  else if (flag === "--agents") agents = String(value).split(",");
   else {
     process.stderr.write(`unknown argument ${show(flag)}\n${usage}\n`);
     process.exit(2);
@@ -61,7 +57,7 @@ for (const group of CONTROLS) {
     units.push({
       control,
       owner: group.owner,
-      status: agents.includes(group.owner) ? "planned" : "out_of_scope",
+      status: "planned",
       prior_status: "none",
       reviewed_paths: [],
       deleted_paths: [],
@@ -90,7 +86,7 @@ if (priorFile) {
   }
 }
 const ledger = {
-  run: { depth, scope: agents, prior_ledger: Boolean(priorFile) },
+  run: { prior_ledger: Boolean(priorFile) },
   base_commit: head || "none",
   dirty,
   profile: { modules: [...modules] },

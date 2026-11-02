@@ -92,15 +92,6 @@
         "maxLength": 4096
       }
     },
-    "tier": {
-      "enum": [
-        "T0",
-        "T1",
-        "T2",
-        "T3",
-        "T4"
-      ]
-    },
     "test_health": {
       "enum": [
         "good",
@@ -110,18 +101,6 @@
       ]
     },
     "commands_discovered": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    },
-    "commands_executed": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    },
-    "skipped": {
       "type": "array",
       "items": {
         "type": "string"
@@ -314,39 +293,6 @@
         },
         "verification": {
           "$ref": "#/$defs/line"
-        },
-        "sources": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "required": [
-              "url",
-              "retrieved",
-              "claim",
-              "source_type"
-            ],
-            "additionalProperties": false,
-            "properties": {
-              "url": {
-                "type": "string",
-                "pattern": "^https://"
-              },
-              "retrieved": {
-                "type": "string",
-                "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
-              },
-              "claim": {
-                "$ref": "#/$defs/line"
-              },
-              "source_type": {
-                "enum": [
-                  "primary",
-                  "vendor",
-                  "secondary"
-                ]
-              }
-            }
-          }
         },
         "false_positive_notes": {
           "$ref": "#/$defs/line"

@@ -13,25 +13,10 @@
     "run": {
       "type": "object",
       "required": [
-        "depth",
-        "scope",
         "prior_ledger"
       ],
       "additionalProperties": false,
       "properties": {
-        "depth": {
-          "enum": [
-            "quick",
-            "standard",
-            "deep"
-          ]
-        },
-        "scope": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
         "prior_ledger": {
           "type": "boolean"
         }
@@ -103,8 +88,7 @@
             "candidate",
             "blocked",
             "deferred",
-            "not_applicable",
-            "out_of_scope"
+            "not_applicable"
           ]
         },
         "prior_status": {
