@@ -82,11 +82,11 @@ Prior run. If `.tmp/harden/coverage-ledger.json` already exists, move it to `.tm
 | `not_applicable` | `prior_not_applicable_same_source` | `prior_not_applicable_changed_source` |
 | `blocked`, `deferred` | `prior_blocked`, `prior_deferred` | same |
 
-It prints the counts. `scripts/delta-ledger.cjs` prints the same classification without writing a ledger. Every new unit is seeded `planned`.
+It prints the counts. Every new unit is seeded `planned`.
 
 A prior status informs priority and is never a reason to skip a unit. Every unit is re-reviewed and every prior fingerprint is carried so the same root cause keeps its identity. The script never trusts a commit SHA as proof that a path is unchanged. If no prior ledger exists, say so in the coverage statement; do not imply that one run exhausts the target.
 
-After seeding, run `node scripts/validate-ledger.cjs .tmp/harden/coverage-ledger.json` from the audited repo's root (the validator resolves `reviewed_paths` against the current directory, or `--root <dir>`). A non-zero exit stops the run.
+After seeding, run `node <skill-dir>/scripts/validate-ledger.cjs .tmp/harden/coverage-ledger.json` from the audited repo's root (the validator resolves `reviewed_paths` against the current directory, or `--root <dir>`). A non-zero exit stops the run.
 
 ### 3. Select specialists
 
@@ -108,7 +108,7 @@ A fresh pass re-reads every cited source location and tries to refute each candi
 
 ### 5. Normalize
 
-- Validate each packet with `node scripts/validate-findings.cjs .tmp/harden/<agent>/findings.json`. A non-zero exit becomes `WARNING: <agent> packet invalid` and that agent's controls go `blocked`. Do not repair a packet.
+- Validate each packet with `node <skill-dir>/scripts/validate-findings.cjs .tmp/harden/<agent>/findings.json`. A non-zero exit becomes `WARNING: <agent> packet invalid` and that agent's controls go `blocked`. Do not repair a packet.
 - Update the ledger from the packets with `node <skill-dir>/scripts/update-ledger.cjs .tmp/harden/coverage-ledger.json --packets .tmp/harden/*/findings.json`. It maps `assessed` to `covered`, or to `candidate` when findings are linked (copying their fingerprints), maps `not-assessable` and `blocked` to `blocked`, sets `reviewed_paths` from each row's `evidence_refs`, and writes `evidence_hash` from the files on disk. It writes nothing if any row is invalid. Then run `node <skill-dir>/scripts/validate-ledger.cjs .tmp/harden/coverage-ledger.json --check-hashes --packets .tmp/harden/*/findings.json`. Exit 0 proves format and ledger consistency only, not that a finding is true.
 - Dedupe by fingerprint, then by sink (`path` + root cause). Keep the owner's wording. Annotate `also flagged by`.
 - Adjudicate with the severity matrix. Higher severity wins only if reachability and evidence_quality support it; otherwise `needs-validation`, which carries no severity. Severity never exceeds demonstrated impact. A `regulatory` tag never changes severity.
