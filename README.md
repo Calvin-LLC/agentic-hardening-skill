@@ -1,3 +1,6 @@
+SUPERCEEDED BY https://github.com/Calvin-LLC/skills
+
+
 # harden
 
 A skill that audits a codebase for security, supply-chain, reliability, and test
